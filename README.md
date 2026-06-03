@@ -1,3 +1,6 @@
+[![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python)](https://www.python.org/) ![Jupyter](https://img.shields.io/badge/Jupyter-F37626?logo=jupyter&logoColor=white) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tonyjurg/Perseus-mcp)
+
 # Perseus-mcp
 
 MCP server for Perseus Greek text research. It runs as a local FastMCP server so MCP-capable applications can attach these Perseus tools to the LLM/model provider of your choice.
