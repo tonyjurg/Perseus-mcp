@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+pytest-cache-files-*/
+.venv/
+
+.ipynb_checkpoints/
+
+.env
+.env.*
+!.env.example
