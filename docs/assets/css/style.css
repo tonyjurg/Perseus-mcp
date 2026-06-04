@@ -146,6 +146,21 @@ li {
   margin: 0;
 }
 
+.link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.link-actions a {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-weight: 650;
+  padding: 0.35rem 0.65rem;
+  text-decoration: none;
+}
+
 code,
 pre {
   background: var(--code-bg);
