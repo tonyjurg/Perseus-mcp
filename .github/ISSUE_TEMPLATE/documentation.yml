@@ -1,0 +1,43 @@
+name: Documentation issue
+description: Report unclear, missing, or outdated documentation.
+title: "[Docs]: "
+labels:
+  - documentation
+body:
+  - type: textarea
+    id: page
+    attributes:
+      label: Page or section
+      description: Link or name the documentation page, section, README part, or notebook.
+      placeholder: docs/enduser.md, README setup section, examples/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is unclear or missing?
+      description: Describe the documentation problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+      description: If you know what would help, describe the change.
+
+  - type: dropdown
+    id: docs_area
+    attributes:
+      label: Documentation area
+      options:
+        - Installation
+        - Client configuration
+        - Tool usage
+        - Greek search or Beta Code
+        - CTS URNs and navigation
+        - Architecture
+        - GitHub Pages site
+        - Examples or notebooks
+        - Other

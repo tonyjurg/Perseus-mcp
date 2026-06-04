@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest a new tool, behavior, workflow, or integration.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the research or client workflow the feature would support.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do?
+      placeholder: I want to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the tool, output, configuration, or workflow you would like.
+      placeholder: Add a tool that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How do you handle this today, if at all?
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link to relevant Perseus, Scaife, CTS, MCP, or client documentation.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - MCP tool behavior
+        - Greek search
+        - CTS retrieval or navigation
+        - Discovery helpers
+        - Client configuration
+        - Documentation
+        - Examples or notebooks
+        - Other

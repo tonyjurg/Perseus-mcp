@@ -1,0 +1,88 @@
+name: Bug or error report
+description: Report a problem with installing, running, or using Perseus MCP.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please include enough detail to reproduce the issue.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen.
+      placeholder: The server returned..., but I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include commands, client actions, tool calls, and arguments.
+      placeholder: |
+        1. Run `uv run server.py`
+        2. Call `search_perseus` with ...
+        3. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message or traceback
+      description: Paste the full error message, traceback, or returned payload if available.
+      render: text
+
+  - type: input
+    id: tool
+    attributes:
+      label: MCP tool name
+      description: If this happened during a tool call, name the tool.
+      placeholder: search_perseus
+
+  - type: textarea
+    id: arguments
+    attributes:
+      label: Tool arguments, URN, or query
+      description: Include the CTS URN, Greek query, Beta Code query, or JSON arguments if relevant.
+      render: json
+      placeholder: |
+        {
+          "query": "mh=nin",
+          "language": "greek",
+          "query_format": "auto"
+        }
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: Client or runtime
+      options:
+        - MCP Inspector
+        - Cursor
+        - Claude Desktop
+        - FastMCP in-process client
+        - Jupyter notebook
+        - Other
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: Python 3.12.4
+
+  - type: input
+    id: install
+    attributes:
+      label: Install method
+      placeholder: uv sync, pip install -e ., pip install -e ".[dev]"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots, links, upstream response excerpts, or anything else useful.

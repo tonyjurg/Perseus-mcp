@@ -1,0 +1,57 @@
+name: Upstream data or service issue
+description: Report a problem that may come from Perseus, Scaife, CTS, or returned source data.
+title: "[Upstream]: "
+labels:
+  - upstream
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when the local MCP server runs, but the returned Perseus/Scaife data appears malformed, unavailable, incomplete, or surprising.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What looks wrong?
+      description: Describe the unexpected upstream data or service behavior.
+    validations:
+      required: true
+
+  - type: input
+    id: urn
+    attributes:
+      label: CTS URN
+      description: Include the URN if this involves passage retrieval, references, labels, or navigation.
+      placeholder: urn:cts:greekLit:tlg0012.tlg001.perseus-grc2:1.1
+
+  - type: input
+    id: query
+    attributes:
+      label: Search query
+      description: Include the Unicode Greek or Beta Code query if this involves search.
+      placeholder: mh=nin
+
+  - type: input
+    id: tool
+    attributes:
+      label: MCP tool name
+      placeholder: get_passage, get_valid_references, search_perseus
+
+  - type: textarea
+    id: response
+    attributes:
+      label: Returned response excerpt
+      description: Paste the relevant XML, JSON, or plaintext excerpt.
+      render: text
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected source behavior
+      description: If known, describe what the Perseus/Scaife response should contain.
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Related links
+      description: Link to upstream Perseus/Scaife pages, API responses, or documentation if available.

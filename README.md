@@ -147,3 +147,16 @@ uv --directory /full/path/to/Perseus-mcp run server.py
 ```
 
 Most MCP clients need the same pieces: server name `perseus`, command `uv`, args `--directory /full/path/to/Perseus-mcp run server.py`, and an empty environment unless you have local customizations. See `docs/enduser.md` for generic client guidance and `docs/architecture.md` for the architecture choices, including why FastMCP is used.
+
+## Contributing and reporting issues
+
+Bug reports, documentation fixes, focused feature requests, and pull requests
+are welcome. Please report problems through the GitHub issue tracker and include
+the command, Python version, MCP client, tool arguments, traceback, and any
+relevant CTS URN or Greek search query when possible.
+
+See `docs/contributing.md` for contribution guidance.
+
+## License
+
+This project is released under the MIT License. See `LICENSE` for details.

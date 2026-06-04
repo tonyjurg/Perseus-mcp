@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://tonyjurg.github.io/Perseus-mcp/
+    about: Read the GitHub Pages documentation before opening an issue.
+  - name: Repository
+    url: https://github.com/tonyjurg/Perseus-mcp
+    about: View the project source, README, and examples.
