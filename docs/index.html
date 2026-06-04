@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Perseus MCP Documentation</title>
+    <meta name="description" content="Guides and architecture notes for the Perseus MCP server.">
+    <link rel="stylesheet" href="assets/css/style.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a class="site-title" href="./">Perseus MCP</a>
+        <div class="nav-links">
+          <a href="enduser/">End-User Guide</a>
+          <a href="architecture/">Architecture</a>
+          <a href="https://github.com/tonyjurg/Perseus-mcp">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <h1>Perseus MCP Documentation</h1>
+        <p class="lead">
+          Perseus MCP is a local FastMCP server that gives MCP-capable clients
+          structured tools for Greek text research against Perseus CTS and
+          Scaife search.
+        </p>
+      </section>
+
+      <section class="doc-grid" aria-label="Documentation guides">
+        <a class="doc-card" href="enduser/">
+          <h2>End-User Guide</h2>
+          <p>
+            Install the server, connect it to an MCP client, discover URNs,
+            retrieve passages, and troubleshoot common setup issues.
+          </p>
+        </a>
+
+        <a class="doc-card" href="architecture/">
+          <h2>Architecture</h2>
+          <p>
+            Understand the FastMCP host, upstream services, request helpers,
+            tool behavior, error model, and extension points.
+          </p>
+        </a>
+      </section>
+
+      <section>
+        <h2>Quick Start</h2>
+
+        <p>Install dependencies from the project root:</p>
+
+        <pre><code>uv sync</code></pre>
+
+        <p>Run the server:</p>
+
+        <pre><code>uv run server.py</code></pre>
+
+        <p>Configure an MCP-capable client with the same local command:</p>
+
+        <pre><code>uv --directory /full/path/to/Perseus-mcp run server.py</code></pre>
+      </section>
+    </main>
+  </body>
+</html>
