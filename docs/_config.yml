@@ -1,0 +1,16 @@
+title: Perseus MCP
+description: Documentation for the Perseus Greek text research MCP server.
+lang: en
+url: https://tonyjurg.github.io
+baseurl: /Perseus-mcp
+github_url: https://github.com/tonyjurg/Perseus-mcp
+
+plugins:
+  - jekyll-seo-tag
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: default

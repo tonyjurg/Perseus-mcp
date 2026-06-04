@@ -1,3 +1,9 @@
+---
+title: End-User Guide
+description: Install, run, and use the Perseus MCP server in MCP-capable clients.
+permalink: /enduser/
+---
+
 # Perseus MCP Server: End-User Guide
 
 This guide explains how to install, run, and use the `perseus` MCP server in tools like Cursor or Claude Desktop.

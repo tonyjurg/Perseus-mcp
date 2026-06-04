@@ -1,3 +1,9 @@
+---
+title: Architecture
+description: Internal design, request flow, and extension points for the Perseus MCP server.
+permalink: /architecture/
+---
+
 # Perseus MCP Server: How It Works
 
 This document explains internal design, request flow, and extension points for the `perseus` MCP server.

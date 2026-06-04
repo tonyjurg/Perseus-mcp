@@ -1,0 +1,196 @@
+:root {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --text: #172033;
+  --muted: #5c677d;
+  --line: #d9e1ec;
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --code-bg: #eef3f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: var(--accent-strong);
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.site-nav {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1040px;
+  padding: 0.8rem 1.25rem;
+}
+
+.site-title {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.nav-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  justify-content: flex-end;
+}
+
+.nav-links a {
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: 920px;
+  padding: 3rem 1.25rem 5rem;
+}
+
+.hero {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin: 0 0 1rem;
+}
+
+h2 {
+  border-top: 1px solid var(--line);
+  font-size: 1.55rem;
+  margin-top: 2.4rem;
+  padding-top: 1.6rem;
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin-top: 1.8rem;
+}
+
+p,
+li {
+  color: var(--muted);
+}
+
+.lead {
+  color: var(--text);
+  font-size: 1.2rem;
+  max-width: 760px;
+}
+
+.doc-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin: 2rem 0;
+}
+
+.doc-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: block;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.doc-card h2 {
+  border: 0;
+  color: var(--text);
+  font-size: 1.2rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.doc-card p {
+  margin: 0;
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 6px;
+  color: #1f2937;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
+code {
+  padding: 0.1rem 0.28rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td,
+th {
+  border: 1px solid var(--line);
+  padding: 0.55rem;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .site-nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nav-links {
+    justify-content: flex-start;
+  }
+
+  .page {
+    padding-top: 2rem;
+  }
+}
