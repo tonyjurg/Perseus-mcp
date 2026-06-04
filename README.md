@@ -3,7 +3,9 @@
 
 # Perseus-mcp
 
-MCP server for Perseus Greek text research. It runs as a local FastMCP server so MCP-capable applications can attach these Perseus tools to the LLM/model provider of your choice.
+*Give Claude / Cursor / Windsurf direct access to the entire Perseus Digital Library* — ancient Greek texts, precise CTS navigation, plaintext, search, and more.
+
+A high-quality MCP server specialized in Classical Greek literature. It runs as a local FastMCP server so MCP-capable applications can attach these Perseus tools to the LLM/model provider of your choice.
 
 ## Features
 
