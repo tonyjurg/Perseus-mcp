@@ -52,10 +52,21 @@ a:hover {
 }
 
 .site-title {
+  align-items: center;
   color: var(--text);
+  display: flex;
   font-size: 1rem;
+  gap: 0.55rem;
   font-weight: 750;
   text-decoration: none;
+}
+
+.site-logo {
+  border-radius: 50%;
+  display: block;
+  height: 2rem;
+  object-fit: cover;
+  width: 2rem;
 }
 
 .nav-links {
@@ -79,9 +90,19 @@ a:hover {
 }
 
 .hero {
+  align-items: flex-start;
   border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 1rem;
   margin-bottom: 2rem;
   padding-bottom: 2rem;
+}
+
+.hero-logo {
+  border-radius: 12px;
+  display: block;
+  max-width: min(240px, 70vw);
+  width: 100%;
 }
 
 h1,
