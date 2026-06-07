@@ -149,6 +149,33 @@ uv --directory /full/path/to/Perseus-mcp run server.py
 
 Most MCP clients need the same pieces: server name `perseus`, command `uv`, args `--directory /full/path/to/Perseus-mcp run server.py`, and an empty environment unless you have local customizations. See `docs/enduser.md` for generic client guidance and `docs/architecture.md` for the architecture choices, including why FastMCP is used.
 
+### Claude Desktop and Claude Code
+
+The server runs with Claude over stdio, with no OpenRouter or API key required (OpenRouter is only needed for the optional demo client).
+
+**Claude Desktop** — add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "perseus": {
+      "command": "uv",
+      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "server.py"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop; the Perseus tools appear in the tools list.
+
+**Claude Code** — one line:
+
+```bash
+claude mcp add perseus -- uv --directory /full/path/to/Perseus-mcp run server.py
+```
+
+Verified against a stdio MCP handshake: all 12 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).
+
 ## Contributing and reporting issues
 
 Bug reports, documentation fixes, focused feature requests, and pull requests
