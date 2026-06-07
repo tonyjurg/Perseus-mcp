@@ -168,6 +168,50 @@ Example:
 
 Restart Cursor, then confirm the `perseus` server and tools appear.
 
+## Configure Claude Desktop
+
+Claude Desktop is an MCP-capable host for local stdio servers. The latest
+Claude-related project documentation already treats Claude Desktop like Cursor
+and MCP Inspector: it launches the same local `perseus` server and then exposes
+the discovered tools to the selected Claude conversation. The only Claude-specific
+part is where you place the JSON configuration and how you restart/debug the
+desktop app.
+
+Open Claude Desktop settings, go to **Developer**, and choose **Edit Config**.
+You can also edit the configuration file directly:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add or merge the `perseus` entry under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "perseus": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/full/path/to/Perseus-mcp",
+        "run",
+        "server.py"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+Use an absolute project path. If Claude Desktop cannot find `uv`, replace
+`"uv"` with the full executable path returned by `which uv` on macOS or
+`where uv` on Windows. Save the file and completely quit and reopen Claude
+Desktop so it reloads the MCP server list.
+
+After restart, open a new Claude conversation and look for the MCP/tool indicator
+or ask Claude to list available MCP tools. You should see the same `perseus`
+tools documented above, including `get_author_resources`,
+`get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
+
 ## Generic MCP JSON Example
 
 Some clients use a JSON structure similar to Cursor's but with different file
