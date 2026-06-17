@@ -235,6 +235,12 @@ relevant CTS URN or Greek search query when possible.
 
 See `docs/contributing.md` for contribution guidance.
 
+## Responsible disclosure
+
+This project was created with assistance from OpenAI Codex. The human
+maintainer remains responsible for reviewing, testing, and accepting all code
+and documentation changes.
+
 ## License
 
 This project is released under the MIT License. See `LICENSE` for details.
