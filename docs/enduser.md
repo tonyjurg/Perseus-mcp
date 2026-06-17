@@ -244,6 +244,7 @@ or ask Claude to list available MCP tools. You should see the same `perseus`
 tools documented above, including `get_author_resources`,
 `get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
 
+>>>>>>> theirs
 ## Generic MCP JSON Example
 
 Some clients use a JSON structure similar to Cursor's but with different file
