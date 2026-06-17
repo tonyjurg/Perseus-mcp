@@ -161,6 +161,15 @@ URL, URN, and level. Environment variables control the behavior:
 - `PERSEUS_MCP_CACHE_TTL_SECONDS`
 - `PERSEUS_MCP_DISABLE_CACHE`
 
+The default disk cache path is relative to `Path.cwd()` for the running Python
+process. A notebook kernel launched from `examples/` and an MCP server launched
+from the repository root are separate Python processes, so each has its own
+in-memory cache and, unless `PERSEUS_MCP_CACHE_DIR` is set, a different disk
+cache root. This does not create duplicate MCP server instances by itself; it
+only affects where cache files are read and written. Use an absolute
+`PERSEUS_MCP_CACHE_DIR` when multiple local entry points should share one disk
+cache.
+
 ### Author resource filtering
 
 `get_author_resources(author)` is a convenience layer over CTS `GetCapabilities`.

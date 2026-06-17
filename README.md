@@ -74,6 +74,14 @@ Configure it with:
 - `PERSEUS_MCP_CACHE_TTL_SECONDS` — set cache TTL; default is 86400 seconds.
 - `PERSEUS_MCP_DISABLE_CACHE=1` — disable both memory and disk cache reads/writes.
 
+The current working directory is the directory from which the Python process is
+started. Running the MCP server from the repository root uses
+`.cache/perseus-mcp`; running a notebook from `examples/` would otherwise use
+`examples/.cache/perseus-mcp`. That is not a second server instance, only a
+second cache location for a separate Python process. To keep one cache location
+across notebooks and MCP clients, set `PERSEUS_MCP_CACHE_DIR` to an absolute
+path such as `/path/to/Perseus-mcp/.cache/perseus-mcp`.
+
 ## URN Discovery
 
 Available edition URNs can differ between Perseus CTS and Scaife search results,
@@ -145,7 +153,7 @@ The `examples/` directory includes Jupyter notebooks that demonstrate both direc
 - `examples/05_mcp_all_tools.ipynb` — complete MCP tool catalog with descriptions and input schemas.
 - `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using NVIDIA Nemotron 3 Super (free) by default.
 - `examples/07_mcp_advanced_search_options.ipynb` — MCP form/lemma search, Scaife operator queries, and author-scoped search examples.
-- `examples/08_mcp_new_cache_and_search_tools.ipynb` — smoke-test notebook for cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
+- `examples/08_mcp_new_cache_and_search_tools.ipynb` — advanced demonstration of cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
 
 Run them after installing the project dependencies. The MCP notebooks use
 FastMCP's in-process client transport and call the same tools exposed to

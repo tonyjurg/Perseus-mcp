@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 pytest-cache-files-*/
 .venv/
+.cache/
+examples/.cache/
 
 .ipynb_checkpoints/
 

@@ -63,6 +63,13 @@ Use `get_cache_status()`, `refresh_metadata_cache()`, and
 `clear_metadata_cache()` to inspect or manage the cache. Set
 `PERSEUS_MCP_DISABLE_CACHE=1` to disable it, `PERSEUS_MCP_CACHE_DIR` to change
 the disk location, or `PERSEUS_MCP_CACHE_TTL_SECONDS` to adjust expiry.
+By default, the disk cache is relative to the Python process current working
+directory. A server started from the project root uses `.cache/perseus-mcp`,
+while a notebook kernel started inside `examples/` would otherwise use
+`examples/.cache/perseus-mcp`. This does not start two MCP servers; it only
+means two separate Python processes can have separate disk cache directories
+and separate in-memory caches. Set `PERSEUS_MCP_CACHE_DIR` to one absolute path
+when you want notebooks and MCP clients to share the same disk cache.
 
 ## Prerequisites
 
