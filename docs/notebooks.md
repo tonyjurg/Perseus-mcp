@@ -70,3 +70,13 @@ using an OpenRouter API key supplied outside the repository.
   <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/06_openrouter_llm_mcp_interaction.ipynb">GitHub</a>
   <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/06_openrouter_llm_mcp_interaction.ipynb">nbviewer</a>
 </p>
+
+## 07 MCP Advanced Search Options
+
+Demonstrates form search, lemma search, Scaife operator-preserving queries, and
+author-scoped search through the `search_perseus` MCP tool.
+
+<p class="link-actions">
+  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/07_mcp_advanced_search_options.ipynb">GitHub</a>
+  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/07_mcp_advanced_search_options.ipynb">nbviewer</a>
+</p>

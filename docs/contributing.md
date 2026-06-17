@@ -82,3 +82,5 @@ configuration, examples, or tests, the test workflow still runs.
 Do not commit API keys, local `.env` files, notebook secrets, or private client
 configuration. The `.env.example` file documents expected environment variables
 without storing real credentials.
+CI blocks pushed branches and pull requests that contain an OpenRouter key-like
+token matching `sk-or-v1-[A-Za-z0-9_-]{20,}` in tracked files.

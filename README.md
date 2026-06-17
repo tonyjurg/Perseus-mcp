@@ -116,6 +116,7 @@ The `examples/` directory includes Jupyter notebooks that demonstrate both direc
 - `examples/04_mcp_greek_search_and_navigation.ipynb` — MCP Greek search with Unicode/Beta Code, valid references, and passage navigation.
 - `examples/05_mcp_all_tools.ipynb` — complete MCP tool catalog with descriptions and input schemas.
 - `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using NVIDIA Nemotron 3 Super (free) by default.
+- `examples/07_mcp_advanced_search_options.ipynb` — MCP form/lemma search, Scaife operator queries, and author-scoped search examples.
 
 Run them after installing the project dependencies. The MCP notebooks use
 FastMCP's in-process client transport and call the same tools exposed to
