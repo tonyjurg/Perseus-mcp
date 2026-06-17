@@ -74,6 +74,7 @@ _BETACODE_COMBINING_MARKS = {
 }
 _BETACODE_MARKERS = frozenset("*()/\\=|+")
 _BETACODE_WORD_RE = re.compile(r"[A-Za-z*()/\\=|+]+")
+_CTS_URN_RE = re.compile(r"urn:cts:[^\s\"'<>]+")
 
 
 async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
@@ -146,6 +147,13 @@ def _normalize_search_language(language: str | None) -> str:
 def _normalize_language(language: str | None) -> str:
     """Normalize a user-facing search language to Scaife's two-letter code."""
     return _normalize_search_language(language)
+
+
+def _normalize_search_kind(search_kind: str | None) -> str:
+    normalized = _normalize_space(search_kind).casefold() or "form"
+    if normalized not in {"form", "lemma"}:
+        raise ValueError("search_kind must be one of: form, lemma")
+    return normalized
 
 
 def _looks_like_betacode(query: str) -> bool:
@@ -277,6 +285,44 @@ def _query_match_rank(values: list[str | None], query: str) -> int:
     return 0 if normalized_query in normalized_values else 1
 
 
+def _matching_author_entries_from_capabilities(
+    capabilities_xml: str,
+    author: str,
+    language: str | None = None,
+    *,
+    names_only: bool = False,
+) -> list[dict[str, Any]]:
+    query = _normalize_space(author)
+    if not query:
+        raise ValueError("author must not be empty")
+
+    root = _capabilities_root(capabilities_xml)
+    authors: list[dict[str, Any]] = []
+
+    for text_group in root.iter():
+        if _local_name(text_group.tag).casefold() != "textgroup":
+            continue
+        entry = _text_group_entry(text_group)
+        searchable = entry.get("names", [])
+        if not names_only:
+            searchable = [entry.get("urn"), *searchable]
+        if not _text_matches_query(searchable, query):
+            continue
+        works = [work for work in entry["works"] if _work_matches_language(work, language)]
+        if not works and language is not None:
+            continue
+        entry["works"] = works
+        entry["works_count"] = len(works)
+        authors.append(entry)
+
+    authors.sort(
+        key=lambda entry: _query_match_rank(
+            [entry.get("urn"), *entry.get("names", [])], query
+        )
+    )
+    return authors
+
+
 def _list_text_groups_from_capabilities(
     capabilities_xml: str,
     language: str | None = None,
@@ -330,30 +376,8 @@ def _list_text_groups_from_capabilities(
 def _author_resources_from_capabilities(
     capabilities_xml: str, author: str, language: str | None = None
 ) -> str:
-    query = _normalize_space(author)
-    if not query:
-        raise ValueError("author must not be empty")
-
-    root = _capabilities_root(capabilities_xml)
-    authors: list[dict[str, Any]] = []
-
-    for text_group in root.iter():
-        if _local_name(text_group.tag).casefold() != "textgroup":
-            continue
-        entry = _text_group_entry(text_group)
-        if not _text_matches_query([entry.get("urn"), *entry.get("names", [])], query):
-            continue
-        works = [work for work in entry["works"] if _work_matches_language(work, language)]
-        if not works and language is not None:
-            continue
-        entry["works"] = works
-        entry["works_count"] = len(works)
-        authors.append(entry)
-
-    authors.sort(
-        key=lambda entry: _query_match_rank(
-            [entry.get("urn"), *entry.get("names", [])], query
-        )
+    authors = _matching_author_entries_from_capabilities(
+        capabilities_xml, author, language
     )
 
     return json.dumps(
@@ -362,6 +386,52 @@ def _author_resources_from_capabilities(
             "language": _normalize_cts_language(language),
             "match_count": len(authors),
             "authors": authors,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def _author_name_matches_from_capabilities(
+    capabilities_xml: str,
+    query: str,
+    language: str | None = None,
+    limit: int = 100,
+) -> str:
+    if not _normalize_space(query):
+        raise ValueError("query must not be empty")
+
+    authors = _matching_author_entries_from_capabilities(
+        capabilities_xml, query, language, names_only=True
+    )[:limit]
+    normalized_query = _normalize_space(query).casefold()
+
+    return json.dumps(
+        {
+            "query": query,
+            "language": _normalize_cts_language(language),
+            "match_count": len(authors),
+            "authors": [
+                {
+                    "urn": author.get("urn"),
+                    "names": author.get("names", []),
+                    "matched_names": [
+                        name
+                        for name in author.get("names", [])
+                        if normalized_query in _normalize_space(name).casefold()
+                    ],
+                    "works_count": author.get("works_count", 0),
+                    "works": [
+                        {
+                            "urn": work.get("urn"),
+                            "language": work.get("language"),
+                            "titles": work.get("titles", []),
+                        }
+                        for work in author.get("works", [])
+                    ],
+                }
+                for author in authors
+            ],
         },
         ensure_ascii=False,
         indent=2,
@@ -471,6 +541,112 @@ def _first_urn_xml(urn: str, reference_urns: list[str]) -> str:
     return ET.tostring(root, encoding="unicode")
 
 
+def _urn_scope_values_from_author_entries(authors: list[dict[str, Any]]) -> list[str]:
+    prefixes: list[str] = []
+
+    def add(value: str | None) -> None:
+        if value and value not in prefixes:
+            prefixes.append(value)
+
+    for author in authors:
+        add(author.get("urn"))
+        for work in author.get("works", []):
+            add(work.get("urn"))
+            for resource in work.get("resources", []):
+                add(resource.get("urn"))
+
+    return prefixes
+
+
+def _extract_cts_urns(value: Any) -> list[str]:
+    urns: list[str] = []
+
+    if isinstance(value, str):
+        urns.extend(match.group(0).rstrip(".,;)]}") for match in _CTS_URN_RE.finditer(value))
+    elif isinstance(value, dict):
+        for item in value.values():
+            urns.extend(_extract_cts_urns(item))
+    elif isinstance(value, list):
+        for item in value:
+            urns.extend(_extract_cts_urns(item))
+
+    return urns
+
+
+def _urn_matches_scope(urn: str, scope_urns: list[str]) -> bool:
+    for scope_urn in scope_urns:
+        if (
+            urn == scope_urn
+            or urn.startswith(f"{scope_urn}.")
+            or urn.startswith(f"{scope_urn}:")
+        ):
+            return True
+    return False
+
+
+def _result_matches_author_scope(result: Any, scope_urns: list[str]) -> bool:
+    return any(_urn_matches_scope(urn, scope_urns) for urn in _extract_cts_urns(result))
+
+
+def _filter_scaife_search_response_by_author(
+    response_text: str,
+    author: str,
+    authors: list[dict[str, Any]],
+) -> str:
+    data = json.loads(response_text)
+    scope_urns = _urn_scope_values_from_author_entries(authors)
+
+    if isinstance(data, dict) and isinstance(data.get("results"), list):
+        results = data["results"]
+        filtered_results = [
+            result for result in results if _result_matches_author_scope(result, scope_urns)
+        ]
+        data["results"] = filtered_results
+        data["author_scope"] = {
+            "query": author,
+            "match_count": len(authors),
+            "urns": scope_urns,
+            "unfiltered_page_result_count": len(results),
+            "filtered_page_result_count": len(filtered_results),
+            "note": "Author scope is applied locally to the current Scaife result page.",
+        }
+        return json.dumps(data, ensure_ascii=False, indent=2)
+
+    if isinstance(data, list):
+        filtered_results = [
+            result for result in data if _result_matches_author_scope(result, scope_urns)
+        ]
+        return json.dumps(
+            {
+                "results": filtered_results,
+                "author_scope": {
+                    "query": author,
+                    "match_count": len(authors),
+                    "urns": scope_urns,
+                    "unfiltered_page_result_count": len(data),
+                    "filtered_page_result_count": len(filtered_results),
+                    "note": "Author scope is applied locally to the current Scaife result page.",
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    return json.dumps(
+        {
+            "results": [],
+            "author_scope": {
+                "query": author,
+                "match_count": len(authors),
+                "urns": scope_urns,
+                "note": "Scaife returned an unexpected JSON shape; no results could be filtered.",
+            },
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
 @mcp.tool
 async def get_passage(urn: str) -> str:
     """Get the text of a specific passage using a CTS URN.
@@ -540,6 +716,23 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
 
 
 @mcp.tool
+async def find_author_names(
+    query: str, language: str | None = None, limit: int = 100
+) -> str:
+    """Find author/textgroup names by partial name match.
+
+    This matches only exact CTS author/textgroup name fields, not work titles.
+    Examples:
+    - query: "Hom"
+    - query: "Plut"
+    """
+    capabilities_xml = await _cts_request("GetCapabilities")
+    return _author_name_matches_from_capabilities(
+        capabilities_xml, query, language, limit
+    )
+
+
+@mcp.tool
 async def get_work_resources(urn_or_title: str) -> str:
     """List editions/translations/resources for a matching work URN or title.
 
@@ -584,7 +777,12 @@ async def get_prev_next_urn(urn: str) -> str:
 
 @mcp.tool
 async def search_perseus(
-    query: str, language: str = "greek", query_format: str = "auto"
+    query: str,
+    language: str = "greek",
+    query_format: str = "auto",
+    author: str | None = None,
+    search_kind: str = "form",
+    preserve_operators: bool = False,
 ) -> str:
     """Search Perseus texts via Scaife API.
 
@@ -595,20 +793,37 @@ async def search_perseus(
     `query_format="unicode"` to preserve ASCII text in Greek searches.
     The `language` value determines whether Greek query normalization is applied;
     it is not sent to Scaife as a corpus language filter.
+    Optional `author` resolves a CTS author/textgroup name or URN, then locally
+    filters the current Scaife result page to matching CTS URN prefixes.
+    `search_kind` may be "form" or "lemma". Set `preserve_operators=True` for
+    Scaife operator queries such as quoted phrases, `-`, `|`, `*`, or `~`.
     """
     lang_code = _normalize_search_language(language)
-    normalized_query = (
-        _normalize_greek_query(query, query_format) if lang_code == "gr" else query
-    )
-    return await _get(
+    normalized_search_kind = _normalize_search_kind(search_kind)
+    if preserve_operators:
+        normalized_query = unicodedata.normalize("NFC", query)
+    elif lang_code == "gr":
+        normalized_query = _normalize_greek_query(query, query_format)
+    else:
+        normalized_query = query
+
+    response_text = await _get(
         SCAIFE_SEARCH,
         params={
             "q": normalized_query,
-            "kind": "form",
+            "kind": normalized_search_kind,
             "type": "library",
             "page_num": 1,
         },
     )
+    if author is None or not _normalize_space(author):
+        return response_text
+
+    capabilities_xml = await _cts_request("GetCapabilities")
+    authors = _matching_author_entries_from_capabilities(
+        capabilities_xml, author, language
+    )
+    return _filter_scaife_search_response_by_author(response_text, author, authors)
 
 
 if __name__ == "__main__":

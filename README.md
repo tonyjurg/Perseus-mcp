@@ -8,7 +8,7 @@ A high-quality MCP server specialized in Classical Greek literature. It runs as 
 
 ## Features
 
-This server exposes twelve MCP tools. Every tool returns a text payload: some
+This server exposes thirteen MCP tools. Every tool returns a text payload: some
 are raw Perseus CTS XML or Scaife JSON, while the discovery and plaintext
 helpers return locally shaped JSON or readable text.
 
@@ -19,11 +19,12 @@ helpers return locally shaped JSON or readable text.
 - `get_capabilities()` — list available texts/editions from Perseus CTS.
 - `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works.
 - `get_author_resources(author, language=None)` — list works, editions, and translations for a matching author name or CTS textgroup URN.
+- `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match.
 - `get_work_resources(urn_or_title)` — list editions, translations, and resources for a work.
 - `get_label(urn)` — fetch human-readable metadata labels for a URN.
 - `get_first_urn(urn)` — get the first navigable URN under a work/edition.
 - `get_prev_next_urn(urn)` — get neighboring passage URNs for navigation.
-- `search_perseus(query, language="greek", query_format="auto")` — search texts via Scaife search API. Greek queries may be entered as Unicode Greek (for example `μῆνιν`) or Beta Code (for example `mh=nin`).
+- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False)` — search texts via Scaife search API. Greek queries may be entered as Unicode Greek (for example `μῆνιν`) or Beta Code (for example `mh=nin`).
 
 ## Greek Search Input
 
@@ -35,6 +36,15 @@ Search queries are normalized to composed Greek Unicode (NFC), matching sampled 
 The tool uses Scaife's JSON search route and returns the JSON response as text.
 The `language` argument controls Greek query normalization; it is not currently
 sent to Scaife as a corpus language filter.
+Pass `author` to resolve a CTS author/textgroup name or URN and locally filter
+the current Scaife result page to matching CTS URN prefixes.
+Use `search_kind="lemma"` for lemma search; the default `search_kind="form"`
+keeps existing form-search behavior. For Scaife operator queries such as
+quoted phrases, `-`, `|`, `*`, or `~`, set `preserve_operators=True` so Beta
+Code auto-detection does not consume operator characters. For example:
+`search_perseus('"μῆνιν ἄειδε"', query_format="unicode", preserve_operators=True)`,
+`search_perseus("μῆνιν -ἄειδε", query_format="unicode", preserve_operators=True)`,
+or `search_perseus("λόγος | ἀνήρ", search_kind="lemma", query_format="unicode", preserve_operators=True)`.
 
 ## URN Discovery
 
@@ -174,7 +184,7 @@ Restart Claude Desktop; the Perseus tools appear in the tools list.
 claude mcp add perseus -- uv --directory /full/path/to/Perseus-mcp run server.py
 ```
 
-Verified against a stdio MCP handshake: all 12 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).
+Verified against a stdio MCP handshake: all 13 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).
 
 ## Contributing and reporting issues
 

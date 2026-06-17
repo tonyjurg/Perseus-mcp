@@ -97,7 +97,8 @@ Base URL:
 - `https://scaife.perseus.org/search/json/`
 
 `search_perseus` normalizes Greek Unicode/Beta Code input, then calls this
-endpoint with `q`, `kind=form`, `type=library`, and `page_num=1`. The
+endpoint with `q`, `kind`, `type=library`, and `page_num=1`. The `kind`
+parameter is exposed as `search_kind` and may be `form` or `lemma`. The
 `language` argument determines whether Greek query normalization is applied; it
 is not currently sent as a Scaife language filter.
 
@@ -131,11 +132,12 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_capabilities()` → CTS `GetCapabilities`
 - `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
+- `find_author_names(query, language=None, limit=100)` → CTS `GetCapabilities`, then local partial matching against textgroup name fields only
 - `get_work_resources(urn_or_title)` → CTS `GetCapabilities`, then local work filtering and JSON shaping
 - `get_label(urn)` → CTS `GetLabel`
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed
 - `get_prev_next_urn(urn)` → CTS `GetPrevNextUrn`, with a `GetValidReff` fallback when the upstream response is malformed
-- `search_perseus(query, language="greek", query_format="auto")` → Scaife JSON search API with normalized Greek query text
+- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False)` → Scaife JSON search API with normalized Greek query text, form/lemma search, optional operator preservation, and optional local author-scope filtering
 
 ### Author resource filtering
 
@@ -144,6 +146,20 @@ It fetches the capabilities XML, finds matching `TextGroup` or `textgroup`
 entries by case-insensitive author/group name or textgroup URN fragment, and
 returns JSON instead of raw XML.
 Each matched author entry includes the textgroup URN, names, works, work languages, titles, editions, and translations so clients can discover resource URNs without manually parsing the full capabilities response.
+`find_author_names(query)` uses the same inventory source, but searches only
+the CTS textgroup name fields and returns a narrower response for partial name
+discovery.
+
+When `search_perseus(..., author=...)` is used, the server first performs the
+Scaife search request, then resolves the author against CTS capabilities and
+filters the current Scaife result page to hits with CTS URNs under the matched
+author/work/resource URN prefixes. This is local post-filtering rather than a
+server-side Scaife scope parameter.
+
+`search_kind="lemma"` sends `kind=lemma` to Scaife; the default `form` sends
+`kind=form`. `preserve_operators=True` bypasses Beta Code auto-detection and
+NFC-normalizes the query directly, preserving Scaife operator characters such
+as quotes, `-`, `|`, `*`, and `~`.
 
 ### Navigation fallbacks
 
@@ -162,6 +178,8 @@ than a verbatim upstream response.
 Before Greek searches are sent to Scaife, `search_perseus` normalizes input with `_normalize_greek_query(...)`.
 Unicode Greek is NFC-normalized, while detected or forced Beta Code is transliterated to Unicode Greek, including common breathings, accents, diaeresis, iota subscript, uppercase markers, and final sigma handling.
 `query_format` may be `auto`, `betacode`, or `unicode`; `auto` detects explicit Beta Code marks and short unaccented Beta Code-like queries.
+Operator searches should use `preserve_operators=True`, because characters such
+as `+`, `|`, and `*` also have Beta Code meanings.
 
 ### Unicode normalization findings
 

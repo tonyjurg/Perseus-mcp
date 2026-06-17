@@ -20,7 +20,7 @@ Use it when you want an LLM to help with tasks such as:
 - searching Greek text with Unicode Greek or Beta Code input;
 - keeping the upstream Perseus/Scaife response available for verification.
 
-The current implementation exposes twelve text-returning tools:
+The current implementation exposes thirteen text-returning tools:
 
 - `get_passage(urn)`
 - `get_passage_plus(urn)`
@@ -29,15 +29,21 @@ The current implementation exposes twelve text-returning tools:
 - `get_capabilities()`
 - `list_text_groups(language=None, query=None, limit=100)`
 - `get_author_resources(author, language=None)`
+- `find_author_names(query, language=None, limit=100)`
 - `get_work_resources(urn_or_title)`
 - `get_label(urn)`
 - `get_first_urn(urn)`
 - `get_prev_next_urn(urn)`
-- `search_perseus(query, language="greek", query_format="auto")`
+- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False)`
 
 Raw CTS operations return XML text, `search_perseus` returns Scaife JSON text,
 discovery helpers return locally shaped JSON text, and
 `get_passage_plaintext` returns readable passage text.
+
+`search_perseus` defaults to form search. Set `search_kind="lemma"` for lemma
+search. For Scaife operator queries, set `preserve_operators=True` and usually
+`query_format="unicode"` so characters such as quotes, `-`, `|`, `*`, and `~`
+reach Scaife unchanged.
 
 ## Prerequisites
 
@@ -96,7 +102,7 @@ Most clients ask for the same conceptual fields:
 | Transport | stdio/local process, if the client asks |
 
 After connection, ask your client to list MCP tools or inspect the `perseus`
-server. You should see tools such as `get_author_resources`,
+server. You should see tools such as `find_author_names`, `get_author_resources`,
 `get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
 
 ### Prompting pattern for any LLM
@@ -244,6 +250,7 @@ The discovery helpers are useful when you do not yet know the exact CTS URN to f
 
 - `list_text_groups(language=None, query=None, limit=100)` lists author/textgroup matches and their works. Use `language="greek"` or `language="latin"` to focus the inventory, and `query` to match author names, textgroup URNs, or work titles.
 - `get_author_resources(author, language=None)` returns detailed JSON for a matching author or textgroup, including work URNs, titles, languages, editions, translations, and other resource URNs.
+- `find_author_names(query, language=None, limit=100)` matches only CTS author/textgroup name fields, so partial queries such as `"Hom"` return author names without also matching work titles.
 - `get_work_resources(urn_or_title)` narrows directly to a work title or work URN and returns its editions/translations/resources with author context.
 - `get_passage_plaintext(urn)` fetches a passage through CTS and extracts readable text from the returned XML.
 
@@ -251,6 +258,7 @@ Examples:
 
 - `list_text_groups(language="greek", query="Homer")`
 - `list_text_groups(language="latin", query="Ovid")`
+- `find_author_names("Hom", language="greek")`
 - `get_author_resources("urn:cts:greekLit:tlg0012", language="greek")`
 - `get_work_resources("Iliad")`
 - `get_passage_plaintext("urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1")`
@@ -271,7 +279,7 @@ used `perseus-grc2`; either inventory may change.
 
 Recommended workflow:
 
-1. Start with `list_text_groups(...)`, `get_author_resources(...)`, or `get_work_resources(...)` to discover useful URNs without parsing the full capabilities XML manually.
+1. Start with `find_author_names(...)`, `list_text_groups(...)`, `get_author_resources(...)`, or `get_work_resources(...)` to discover useful URNs without parsing the full capabilities XML manually.
 2. Use `get_label(urn)` for human-readable metadata.
 3. Use `get_valid_references(urn)` and optionally `level` to discover citations.
 4. Fetch text with `get_passage(...)`, `get_passage_plus(...)`, or `get_passage_plaintext(...)`.
@@ -288,6 +296,6 @@ operations, the server derives a well-formed XML result from
 - **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run server.py` works manually.
 - **Client connects but the model does not call tools**: explicitly ask the model to use the `perseus` MCP tools, or use the client's tool picker/approval UI if it has one.
 - **Wrong model/provider**: model choice is controlled by your LLM client, not by this server. Keep this MCP server config the same and choose the desired model in the client.
-- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. The `language` argument controls query normalization but is not currently sent to Scaife as a corpus language filter.
+- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument is applied as local filtering over the current Scaife result page.
 - **Unexpected edition URN**: Scaife search and Perseus CTS do not always expose the same edition identifiers. Use the discovery tools before calling CTS passage or navigation tools.
 

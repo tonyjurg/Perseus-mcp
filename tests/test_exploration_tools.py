@@ -3,9 +3,12 @@ import json
 import pytest
 
 from server import (
+    _author_name_matches_from_capabilities,
     _author_resources_from_capabilities,
     _first_urn_xml,
+    _filter_scaife_search_response_by_author,
     _list_text_groups_from_capabilities,
+    _matching_author_entries_from_capabilities,
     _normalize_search_language,
     _passage_plaintext_from_xml,
     _prev_next_xml,
@@ -91,6 +94,24 @@ def test_author_resources_rejects_empty_author_query() -> None:
         _author_resources_from_capabilities(CAPABILITIES_XML, "  ")
 
 
+def test_author_name_matches_only_textgroup_names() -> None:
+    result = json.loads(_author_name_matches_from_capabilities(CAPABILITIES_XML, "Hom"))
+
+    assert result["match_count"] == 1
+    assert result["authors"][0]["names"] == ["Homer"]
+    assert result["authors"][0]["matched_names"] == ["Homer"]
+
+    no_title_match = json.loads(
+        _author_name_matches_from_capabilities(CAPABILITIES_XML, "Iliad")
+    )
+    assert no_title_match["match_count"] == 0
+
+
+def test_author_name_matches_rejects_empty_query() -> None:
+    with pytest.raises(ValueError, match="query must not be empty"):
+        _author_name_matches_from_capabilities(CAPABILITIES_XML, "  ")
+
+
 def test_work_resources_matches_title_and_returns_author_context() -> None:
     result = json.loads(_work_resources_from_capabilities(CAPABILITIES_XML, "Iliad"))
 
@@ -136,3 +157,23 @@ def test_first_urn_xml_uses_first_valid_reference() -> None:
 def test_search_language_normalizes_greek_and_latin_names() -> None:
     assert _normalize_search_language("Ancient Greek") == "gr"
     assert _normalize_search_language("latin") == "la"
+
+
+def test_scaife_search_response_can_be_filtered_to_author_scope() -> None:
+    authors = _matching_author_entries_from_capabilities(CAPABILITIES_XML, "Homer")
+    response_text = json.dumps(
+        {
+            "results": [
+                {"urn": "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1"},
+                {"urn": "urn:cts:latinLit:phi0959.phi006.perseus-lat2:1"},
+            ]
+        }
+    )
+
+    result = json.loads(
+        _filter_scaife_search_response_by_author(response_text, "Homer", authors)
+    )
+
+    assert len(result["results"]) == 1
+    assert result["results"][0]["urn"].startswith("urn:cts:greekLit:tlg0012")
+    assert result["author_scope"]["unfiltered_page_result_count"] == 2
