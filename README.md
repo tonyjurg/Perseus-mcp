@@ -8,7 +8,7 @@ A high-quality MCP server specialized in Classical Greek literature. It runs as 
 
 ## Features
 
-This server exposes thirteen MCP tools. Every tool returns a text payload: some
+This server exposes twenty-three MCP tools. Every tool returns a text payload: some
 are raw Perseus CTS XML or Scaife JSON, while the discovery and plaintext
 helpers return locally shaped JSON or readable text.
 
@@ -16,7 +16,12 @@ helpers return locally shaped JSON or readable text.
 - `get_passage_plus(urn)` — fetch passage text plus contextual metadata.
 - `get_passage_plaintext(urn)` — fetch a CTS passage as plain readable text.
 - `get_valid_references(urn, level=None)` — retrieve navigable citation references for a work or edition.
+- `get_valid_references_json(urn, level=None, limit=100, offset=0)` — retrieve paged citation references as JSON.
+- `count_valid_references(urn, level=None)` — count valid references without returning the full list.
 - `get_capabilities()` — list available texts/editions from Perseus CTS.
+- `get_cache_status()` — inspect local metadata cache state.
+- `refresh_metadata_cache()` — refresh cached CTS capabilities.
+- `clear_metadata_cache()` — clear in-memory and disk metadata cache entries.
 - `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works.
 - `get_author_resources(author, language=None)` — list works, editions, and translations for a matching author name or CTS textgroup URN.
 - `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match.
@@ -24,7 +29,12 @@ helpers return locally shaped JSON or readable text.
 - `get_label(urn)` — fetch human-readable metadata labels for a URN.
 - `get_first_urn(urn)` — get the first navigable URN under a work/edition.
 - `get_prev_next_urn(urn)` — get neighboring passage URNs for navigation.
-- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False)` — search texts via Scaife search API. Greek queries may be entered as Unicode Greek (for example `μῆνιν`) or Beta Code (for example `mh=nin`).
+- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False, page_num=1, text_group=None, work=None, result_format="instances")` — search texts via Scaife search API. Greek queries may be entered as Unicode Greek (for example `μῆνιν`) or Beta Code (for example `mh=nin`).
+- `search_within_text(query, text_urn, ...)` — search within a single Scaife text/edition URN.
+- `get_passage_highlights(query, passage_urn, ...)` — get Scaife token highlight positions for one passage.
+- `get_scaife_library_metadata(urn)` — get Scaife JSON metadata for a library URN.
+- `get_scaife_passage_json(urn)` — get Scaife JSON for a passage URN.
+- `get_scaife_passage_text(urn)` — get Scaife plaintext for a passage URN.
 
 ## Greek Search Input
 
@@ -36,8 +46,10 @@ Search queries are normalized to composed Greek Unicode (NFC), matching sampled 
 The tool uses Scaife's JSON search route and returns the JSON response as text.
 The `language` argument controls Greek query normalization; it is not currently
 sent to Scaife as a corpus language filter.
-Pass `author` to resolve a CTS author/textgroup name or URN and locally filter
-the current Scaife result page to matching CTS URN prefixes.
+Pass `author` to resolve a CTS author/textgroup name or URN. When it resolves
+to exactly one textgroup, Scaife receives a server-side `text_group` filter;
+ambiguous matches fall back to local CTS URN-prefix filtering of the current
+result page.
 Use `search_kind="lemma"` for lemma search; the default `search_kind="form"`
 keeps existing form-search behavior. For Scaife operator queries such as
 quoted phrases, `-`, `|`, `*`, or `~`, set `preserve_operators=True` so Beta
@@ -45,6 +57,22 @@ Code auto-detection does not consume operator characters. For example:
 `search_perseus('"μῆνιν ἄειδε"', query_format="unicode", preserve_operators=True)`,
 `search_perseus("μῆνιν -ἄειδε", query_format="unicode", preserve_operators=True)`,
 or `search_perseus("λόγος | ἀνήρ", search_kind="lemma", query_format="unicode", preserve_operators=True)`.
+Use `page_num` for pagination and pass `text_group` or `work` to use Scaife's
+server-side scope filters. When `author` resolves to exactly one CTS textgroup,
+`search_perseus` sends that textgroup to Scaife instead of filtering only the
+returned page locally.
+
+## Local Metadata Cache
+
+Discovery and navigation tools cache stable CTS metadata locally to avoid
+repeated multi-megabyte `GetCapabilities` and `GetValidReff` requests. The
+default disk cache lives in `.cache/perseus-mcp` under the current working
+directory and also uses an in-memory cache for the running server process.
+Configure it with:
+
+- `PERSEUS_MCP_CACHE_DIR` — override the disk cache directory.
+- `PERSEUS_MCP_CACHE_TTL_SECONDS` — set cache TTL; default is 86400 seconds.
+- `PERSEUS_MCP_DISABLE_CACHE=1` — disable both memory and disk cache reads/writes.
 
 ## URN Discovery
 
@@ -117,6 +145,7 @@ The `examples/` directory includes Jupyter notebooks that demonstrate both direc
 - `examples/05_mcp_all_tools.ipynb` — complete MCP tool catalog with descriptions and input schemas.
 - `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using NVIDIA Nemotron 3 Super (free) by default.
 - `examples/07_mcp_advanced_search_options.ipynb` — MCP form/lemma search, Scaife operator queries, and author-scoped search examples.
+- `examples/08_mcp_new_cache_and_search_tools.ipynb` — smoke-test notebook for cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
 
 Run them after installing the project dependencies. The MCP notebooks use
 FastMCP's in-process client transport and call the same tools exposed to
@@ -185,7 +214,7 @@ Restart Claude Desktop; the Perseus tools appear in the tools list.
 claude mcp add perseus -- uv --directory /full/path/to/Perseus-mcp run server.py
 ```
 
-Verified against a stdio MCP handshake: all 13 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).
+Verified against a stdio MCP handshake: all 23 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).
 
 ## Contributing and reporting issues
 

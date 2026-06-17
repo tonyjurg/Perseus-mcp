@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import shutil
 import re
+import time
 import unicodedata
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -13,6 +18,8 @@ mcp = FastMCP("perseus")
 
 CTS_BASE = "https://www.perseus.tufts.edu/hopper/CTS"
 SCAIFE_SEARCH = "https://scaife.perseus.org/search/json/"
+SCAIFE_LIBRARY = "https://scaife.perseus.org/library/"
+DEFAULT_CACHE_TTL_SECONDS = 24 * 60 * 60
 _XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 _COMMON_LANGUAGE_CODES = {
     "gr": "grc",
@@ -75,6 +82,7 @@ _BETACODE_COMBINING_MARKS = {
 _BETACODE_MARKERS = frozenset("*()/\\=|+")
 _BETACODE_WORD_RE = re.compile(r"[A-Za-z*()/\\=|+]+")
 _CTS_URN_RE = re.compile(r"urn:cts:[^\s\"'<>]+")
+_MEMORY_CACHE: dict[str, tuple[float, str]] = {}
 
 
 async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
@@ -89,6 +97,153 @@ async def _cts_request(request: str, urn: str | None = None, **extra_params: Any
     if urn:
         params["urn"] = urn
     return await _get(CTS_BASE, params=params)
+
+
+def _cache_enabled() -> bool:
+    value = _normalize_space(os.environ.get("PERSEUS_MCP_DISABLE_CACHE")).casefold()
+    return value not in {"1", "true", "yes", "on"}
+
+
+def _cache_ttl_seconds() -> int:
+    value = _normalize_space(os.environ.get("PERSEUS_MCP_CACHE_TTL_SECONDS"))
+    if not value:
+        return DEFAULT_CACHE_TTL_SECONDS
+    try:
+        ttl = int(value)
+    except ValueError as exc:
+        raise ValueError("PERSEUS_MCP_CACHE_TTL_SECONDS must be an integer") from exc
+    return max(0, ttl)
+
+
+def _cache_dir() -> Path:
+    configured = _normalize_space(os.environ.get("PERSEUS_MCP_CACHE_DIR"))
+    if configured:
+        return Path(configured).expanduser()
+    return Path.cwd() / ".cache" / "perseus-mcp"
+
+
+def _cache_key(parts: dict[str, Any]) -> str:
+    payload = json.dumps(parts, sort_keys=True, ensure_ascii=True, default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _cache_path(namespace: str, key: str, extension: str = "txt") -> Path:
+    return _cache_dir() / namespace / f"{key}.{extension}"
+
+
+def _memory_cache_get(name: str) -> str | None:
+    if not _cache_enabled():
+        return None
+    cached = _MEMORY_CACHE.get(name)
+    if cached is None:
+        return None
+    timestamp, value = cached
+    ttl = _cache_ttl_seconds()
+    if ttl and time.time() - timestamp > ttl:
+        _MEMORY_CACHE.pop(name, None)
+        return None
+    return value
+
+
+def _memory_cache_set(name: str, value: str) -> None:
+    if _cache_enabled():
+        _MEMORY_CACHE[name] = (time.time(), value)
+
+
+def _disk_cache_get(path: Path) -> str | None:
+    if not _cache_enabled() or not path.exists():
+        return None
+    ttl = _cache_ttl_seconds()
+    if ttl and time.time() - path.stat().st_mtime > ttl:
+        return None
+    return path.read_text(encoding="utf-8")
+
+
+def _disk_cache_set(path: Path, value: str) -> None:
+    if not _cache_enabled():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(value, encoding="utf-8")
+
+
+async def _cached_text(
+    namespace: str,
+    key_parts: dict[str, Any],
+    fetcher,
+    *,
+    extension: str = "xml",
+    refresh: bool = False,
+) -> str:
+    key = _cache_key(key_parts)
+    memory_key = f"{namespace}:{key}"
+    path = _cache_path(namespace, key, extension)
+
+    if not refresh:
+        cached = _memory_cache_get(memory_key)
+        if cached is not None:
+            return cached
+        cached = _disk_cache_get(path)
+        if cached is not None:
+            _memory_cache_set(memory_key, cached)
+            return cached
+
+    value = await fetcher()
+    _memory_cache_set(memory_key, value)
+    _disk_cache_set(path, value)
+    return value
+
+
+async def _get_capabilities_cached(refresh: bool = False) -> str:
+    return await _cached_text(
+        "capabilities",
+        {"request": "GetCapabilities", "base": CTS_BASE},
+        lambda: _cts_request("GetCapabilities"),
+        refresh=refresh,
+    )
+
+
+async def _get_valid_references_cached(
+    urn: str, level: int | None = None, refresh: bool = False
+) -> str:
+    params: dict[str, Any] = {}
+    if level is not None:
+        params["level"] = str(level)
+    return await _cached_text(
+        "valid_reff",
+        {"request": "GetValidReff", "base": CTS_BASE, "urn": urn, **params},
+        lambda: _cts_request("GetValidReff", urn=urn, **params),
+        refresh=refresh,
+    )
+
+
+def _cache_status() -> str:
+    cache_dir = _cache_dir()
+    files = [path for path in cache_dir.rglob("*") if path.is_file()] if cache_dir.exists() else []
+    return json.dumps(
+        {
+            "enabled": _cache_enabled(),
+            "cache_dir": str(cache_dir),
+            "ttl_seconds": _cache_ttl_seconds(),
+            "memory_entries": len(_MEMORY_CACHE),
+            "disk_files": len(files),
+            "disk_bytes": sum(path.stat().st_size for path in files),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def _clear_cache() -> str:
+    _MEMORY_CACHE.clear()
+    cache_dir = _cache_dir()
+    removed = cache_dir.exists()
+    if removed:
+        shutil.rmtree(cache_dir)
+    return json.dumps(
+        {"cache_dir": str(cache_dir), "memory_entries": 0, "disk_cache_removed": removed},
+        ensure_ascii=False,
+        indent=2,
+    )
 
 
 def _local_name(tag: str) -> str:
@@ -154,6 +309,25 @@ def _normalize_search_kind(search_kind: str | None) -> str:
     if normalized not in {"form", "lemma"}:
         raise ValueError("search_kind must be one of: form, lemma")
     return normalized
+
+
+def _normalize_search_result_format(result_format: str | None) -> str:
+    normalized = _normalize_space(result_format).casefold() or "instances"
+    if normalized not in {"instances", "passages"}:
+        raise ValueError("result_format must be one of: instances, passages")
+    return normalized
+
+
+def _positive_int(value: int, name: str) -> int:
+    if value < 1:
+        raise ValueError(f"{name} must be at least 1")
+    return value
+
+
+def _non_negative_int(value: int, name: str) -> int:
+    if value < 0:
+        raise ValueError(f"{name} must not be negative")
+    return value
 
 
 def _looks_like_betacode(query: str) -> bool:
@@ -506,6 +680,33 @@ def _reference_urns_from_xml(references_xml: str) -> list[str]:
     ]
 
 
+def _valid_references_json(
+    references_xml: str,
+    urn: str,
+    level: int | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> str:
+    limit = _positive_int(limit, "limit")
+    offset = _non_negative_int(offset, "offset")
+    references = _reference_urns_from_xml(references_xml)
+    page = references[offset : offset + limit]
+    return json.dumps(
+        {
+            "urn": urn,
+            "level": level,
+            "total_count": len(references),
+            "offset": offset,
+            "limit": limit,
+            "returned_count": len(page),
+            "has_next": offset + limit < len(references),
+            "references": page,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
 def _prev_next_xml(urn: str, reference_urns: list[str]) -> str:
     root = ET.Element("GetPrevNextUrn")
     request = ET.SubElement(root, "request")
@@ -586,6 +787,55 @@ def _urn_matches_scope(urn: str, scope_urns: list[str]) -> bool:
 
 def _result_matches_author_scope(result: Any, scope_urns: list[str]) -> bool:
     return any(_urn_matches_scope(urn, scope_urns) for urn in _extract_cts_urns(result))
+
+
+def _normalize_query_for_search(
+    query: str,
+    language: str = "greek",
+    query_format: str = "auto",
+    preserve_operators: bool = False,
+) -> str:
+    lang_code = _normalize_search_language(language)
+    if preserve_operators:
+        return unicodedata.normalize("NFC", query)
+    if lang_code == "gr":
+        return _normalize_greek_query(query, query_format)
+    return query
+
+
+def _scaife_library_url(urn: str) -> str:
+    return f"{SCAIFE_LIBRARY.rstrip('/')}/{urn}/json/"
+
+
+def _scaife_passage_json_url(urn: str) -> str:
+    return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{urn}/json/"
+
+
+def _scaife_passage_text_url(urn: str) -> str:
+    return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{urn}/text/"
+
+
+def _single_author_text_group_urn(authors: list[dict[str, Any]]) -> str | None:
+    urns = [author.get("urn") for author in authors if author.get("urn")]
+    return urns[0] if len(urns) == 1 else None
+
+
+def _add_author_scope_metadata(
+    response_text: str,
+    author: str,
+    authors: list[dict[str, Any]],
+    text_group: str,
+) -> str:
+    data = json.loads(response_text)
+    if isinstance(data, dict):
+        data["author_scope"] = {
+            "query": author,
+            "match_count": len(authors),
+            "text_group": text_group,
+            "note": "Author scope was sent to Scaife as a server-side text_group filter.",
+        }
+        return json.dumps(data, ensure_ascii=False, indent=2)
+    return response_text
 
 
 def _filter_scaife_search_response_by_author(
@@ -677,16 +927,61 @@ async def get_valid_references(urn: str, level: int | None = None) -> str:
 
     Optionally pass a citation `level` to constrain returned references.
     """
-    params: dict[str, Any] = {}
-    if level is not None:
-        params["level"] = str(level)
-    return await _cts_request("GetValidReff", urn=urn, **params)
+    return await _get_valid_references_cached(urn, level)
+
+
+@mcp.tool
+async def get_valid_references_json(
+    urn: str, level: int | None = None, limit: int = 100, offset: int = 0
+) -> str:
+    """Get valid citation references as paged JSON instead of raw CTS XML."""
+    references_xml = await _get_valid_references_cached(urn, level)
+    return _valid_references_json(references_xml, urn, level, limit, offset)
+
+
+@mcp.tool
+async def count_valid_references(urn: str, level: int | None = None) -> str:
+    """Count valid citation references without returning the full reference list."""
+    references_xml = await _get_valid_references_cached(urn, level)
+    references = _reference_urns_from_xml(references_xml)
+    return json.dumps(
+        {"urn": urn, "level": level, "total_count": len(references)},
+        ensure_ascii=False,
+        indent=2,
+    )
 
 
 @mcp.tool
 async def get_capabilities() -> str:
     """Get the list of available texts and editions from Perseus CTS."""
-    return await _cts_request("GetCapabilities")
+    return await _get_capabilities_cached()
+
+
+@mcp.tool
+async def get_cache_status() -> str:
+    """Get local metadata cache status."""
+    return _cache_status()
+
+
+@mcp.tool
+async def refresh_metadata_cache() -> str:
+    """Refresh cached CTS capabilities metadata from Perseus."""
+    capabilities_xml = await _get_capabilities_cached(refresh=True)
+    return json.dumps(
+        {
+            "refreshed": True,
+            "cache": json.loads(_cache_status()),
+            "capabilities_bytes": len(capabilities_xml.encode("utf-8")),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+@mcp.tool
+async def clear_metadata_cache() -> str:
+    """Clear local metadata cache files and in-memory cache entries."""
+    return _clear_cache()
 
 
 @mcp.tool
@@ -698,7 +993,7 @@ async def list_text_groups(
     Optional `language` accepts values such as "greek", "grc", "latin", or
     "lat". Optional `query` matches author names, textgroup URNs, or work titles.
     """
-    capabilities_xml = await _cts_request("GetCapabilities")
+    capabilities_xml = await _get_capabilities_cached()
     return _list_text_groups_from_capabilities(capabilities_xml, language, query, limit)
 
 
@@ -711,7 +1006,7 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
     - author: "tlg0012"
     - author: "urn:cts:greekLit:tlg0012"
     """
-    capabilities_xml = await _cts_request("GetCapabilities")
+    capabilities_xml = await _get_capabilities_cached()
     return _author_resources_from_capabilities(capabilities_xml, author, language)
 
 
@@ -726,7 +1021,7 @@ async def find_author_names(
     - query: "Hom"
     - query: "Plut"
     """
-    capabilities_xml = await _cts_request("GetCapabilities")
+    capabilities_xml = await _get_capabilities_cached()
     return _author_name_matches_from_capabilities(
         capabilities_xml, query, language, limit
     )
@@ -740,7 +1035,7 @@ async def get_work_resources(urn_or_title: str) -> str:
     - urn_or_title: "urn:cts:greekLit:tlg0012.tlg001"
     - urn_or_title: "Iliad"
     """
-    capabilities_xml = await _cts_request("GetCapabilities")
+    capabilities_xml = await _get_capabilities_cached()
     return _work_resources_from_capabilities(capabilities_xml, urn_or_title)
 
 
@@ -757,7 +1052,7 @@ async def get_first_urn(urn: str) -> str:
     if _is_xml_response(response, "GetFirstUrn"):
         return response
 
-    references_xml = await _cts_request("GetValidReff", urn=urn)
+    references_xml = await _get_valid_references_cached(urn)
     return _first_urn_xml(urn, _reference_urns_from_xml(references_xml))
 
 
@@ -771,7 +1066,7 @@ async def get_prev_next_urn(urn: str) -> str:
     work_urn, separator, _ = urn.rpartition(":")
     if not separator:
         return response
-    references_xml = await _cts_request("GetValidReff", urn=work_urn)
+    references_xml = await _get_valid_references_cached(work_urn)
     return _prev_next_xml(urn, _reference_urns_from_xml(references_xml))
 
 
@@ -783,6 +1078,10 @@ async def search_perseus(
     author: str | None = None,
     search_kind: str = "form",
     preserve_operators: bool = False,
+    page_num: int = 1,
+    text_group: str | None = None,
+    work: str | None = None,
+    result_format: str = "instances",
 ) -> str:
     """Search Perseus texts via Scaife API.
 
@@ -797,33 +1096,134 @@ async def search_perseus(
     filters the current Scaife result page to matching CTS URN prefixes.
     `search_kind` may be "form" or "lemma". Set `preserve_operators=True` for
     Scaife operator queries such as quoted phrases, `-`, `|`, `*`, or `~`.
+    Optional `page_num`, `text_group`, `work`, and `result_format` are passed
+    to Scaife's library search endpoint. When `author` resolves to exactly one
+    CTS textgroup and no explicit `text_group` or `work` is supplied, the
+    author scope is sent to Scaife as a server-side `text_group` filter.
     """
-    lang_code = _normalize_search_language(language)
     normalized_search_kind = _normalize_search_kind(search_kind)
-    if preserve_operators:
-        normalized_query = unicodedata.normalize("NFC", query)
-    elif lang_code == "gr":
-        normalized_query = _normalize_greek_query(query, query_format)
-    else:
-        normalized_query = query
+    normalized_query = _normalize_query_for_search(
+        query, language, query_format, preserve_operators
+    )
+    normalized_page_num = _positive_int(page_num, "page_num")
+    normalized_result_format = _normalize_search_result_format(result_format)
+
+    authors: list[dict[str, Any]] = []
+    resolved_author_text_group: str | None = None
+    if author is not None and _normalize_space(author):
+        capabilities_xml = await _get_capabilities_cached()
+        authors = _matching_author_entries_from_capabilities(
+            capabilities_xml, author, language
+        )
+        resolved_author_text_group = _single_author_text_group_urn(authors)
+
+    effective_text_group = _normalize_space(text_group) or None
+    effective_work = _normalize_space(work) or None
+    if (
+        effective_text_group is None
+        and effective_work is None
+        and resolved_author_text_group is not None
+    ):
+        effective_text_group = resolved_author_text_group
+
+    params: dict[str, Any] = {
+        "q": normalized_query,
+        "kind": normalized_search_kind,
+        "format": normalized_result_format,
+        "type": "library",
+        "page_num": normalized_page_num,
+    }
+    if effective_text_group:
+        params["text_group"] = effective_text_group
+    if effective_work:
+        params["work"] = effective_work
 
     response_text = await _get(
         SCAIFE_SEARCH,
-        params={
-            "q": normalized_query,
-            "kind": normalized_search_kind,
-            "type": "library",
-            "page_num": 1,
-        },
+        params=params,
     )
     if author is None or not _normalize_space(author):
         return response_text
 
-    capabilities_xml = await _cts_request("GetCapabilities")
-    authors = _matching_author_entries_from_capabilities(
-        capabilities_xml, author, language
-    )
+    if effective_text_group and effective_text_group == resolved_author_text_group:
+        return _add_author_scope_metadata(
+            response_text, author, authors, effective_text_group
+        )
+
     return _filter_scaife_search_response_by_author(response_text, author, authors)
+
+
+@mcp.tool
+async def search_within_text(
+    query: str,
+    text_urn: str,
+    language: str = "greek",
+    query_format: str = "auto",
+    search_kind: str = "form",
+    preserve_operators: bool = False,
+    size: int = 10,
+    offset: int = 0,
+) -> str:
+    """Search within a single Scaife text/edition URN."""
+    normalized_query = _normalize_query_for_search(
+        query, language, query_format, preserve_operators
+    )
+    return await _get(
+        SCAIFE_SEARCH,
+        params={
+            "q": normalized_query,
+            "kind": _normalize_search_kind(search_kind),
+            "type": "reader",
+            "text": text_urn,
+            "size": _positive_int(size, "size"),
+            "offset": _non_negative_int(offset, "offset"),
+            "fields": "",
+        },
+    )
+
+
+@mcp.tool
+async def get_passage_highlights(
+    query: str,
+    passage_urn: str,
+    language: str = "greek",
+    query_format: str = "auto",
+    search_kind: str = "form",
+    preserve_operators: bool = False,
+) -> str:
+    """Get Scaife token highlight positions for a query within one passage."""
+    normalized_query = _normalize_query_for_search(
+        query, language, query_format, preserve_operators
+    )
+    return await _get(
+        SCAIFE_SEARCH,
+        params={
+            "q": normalized_query,
+            "kind": _normalize_search_kind(search_kind),
+            "type": "reader",
+            "passage": passage_urn,
+            "size": 1,
+            "fields": "highlights",
+        },
+    )
+
+
+@mcp.tool
+async def get_scaife_library_metadata(urn: str) -> str:
+    """Get Scaife JSON metadata for a textgroup, work, edition, or translation URN."""
+    return await _get(_scaife_library_url(urn))
+
+
+@mcp.tool
+async def get_scaife_passage_json(urn: str) -> str:
+    """Get Scaife JSON passage metadata/content for a passage URN."""
+    return await _get(_scaife_passage_json_url(urn))
+
+
+@mcp.tool
+async def get_scaife_passage_text(urn: str) -> str:
+    """Get Scaife plaintext for a passage URN."""
+    return await _get(_scaife_passage_text_url(urn))
 
 
 if __name__ == "__main__":

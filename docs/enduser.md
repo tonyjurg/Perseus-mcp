@@ -20,13 +20,18 @@ Use it when you want an LLM to help with tasks such as:
 - searching Greek text with Unicode Greek or Beta Code input;
 - keeping the upstream Perseus/Scaife response available for verification.
 
-The current implementation exposes thirteen text-returning tools:
+The current implementation exposes twenty-three text-returning tools:
 
 - `get_passage(urn)`
 - `get_passage_plus(urn)`
 - `get_passage_plaintext(urn)`
 - `get_valid_references(urn, level=None)`
+- `get_valid_references_json(urn, level=None, limit=100, offset=0)`
+- `count_valid_references(urn, level=None)`
 - `get_capabilities()`
+- `get_cache_status()`
+- `refresh_metadata_cache()`
+- `clear_metadata_cache()`
 - `list_text_groups(language=None, query=None, limit=100)`
 - `get_author_resources(author, language=None)`
 - `find_author_names(query, language=None, limit=100)`
@@ -34,7 +39,12 @@ The current implementation exposes thirteen text-returning tools:
 - `get_label(urn)`
 - `get_first_urn(urn)`
 - `get_prev_next_urn(urn)`
-- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False)`
+- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False, page_num=1, text_group=None, work=None, result_format="instances")`
+- `search_within_text(query, text_urn, ...)`
+- `get_passage_highlights(query, passage_urn, ...)`
+- `get_scaife_library_metadata(urn)`
+- `get_scaife_passage_json(urn)`
+- `get_scaife_passage_text(urn)`
 
 Raw CTS operations return XML text, `search_perseus` returns Scaife JSON text,
 discovery helpers return locally shaped JSON text, and
@@ -44,6 +54,15 @@ discovery helpers return locally shaped JSON text, and
 search. For Scaife operator queries, set `preserve_operators=True` and usually
 `query_format="unicode"` so characters such as quotes, `-`, `|`, `*`, and `~`
 reach Scaife unchanged.
+Use `page_num`, `text_group`, and `work` to page or scope Scaife library search
+server-side. `search_within_text` uses Scaife's reader search endpoint for one
+edition/text URN.
+
+CTS capabilities and valid reference metadata are cached locally by default.
+Use `get_cache_status()`, `refresh_metadata_cache()`, and
+`clear_metadata_cache()` to inspect or manage the cache. Set
+`PERSEUS_MCP_DISABLE_CACHE=1` to disable it, `PERSEUS_MCP_CACHE_DIR` to change
+the disk location, or `PERSEUS_MCP_CACHE_TTL_SECONDS` to adjust expiry.
 
 ## Prerequisites
 
@@ -296,6 +315,6 @@ operations, the server derives a well-formed XML result from
 - **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run server.py` works manually.
 - **Client connects but the model does not call tools**: explicitly ask the model to use the `perseus` MCP tools, or use the client's tool picker/approval UI if it has one.
 - **Wrong model/provider**: model choice is controlled by your LLM client, not by this server. Keep this MCP server config the same and choose the desired model in the client.
-- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument is applied as local filtering over the current Scaife result page.
+- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument uses a server-side Scaife `text_group` filter when it resolves to one textgroup, and otherwise falls back to local filtering over the current result page.
 - **Unexpected edition URN**: Scaife search and Perseus CTS do not always expose the same edition identifiers. Use the discovery tools before calling CTS passage or navigation tools.
 

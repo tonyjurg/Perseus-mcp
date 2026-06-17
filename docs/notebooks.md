@@ -80,3 +80,14 @@ author-scoped search through the `search_perseus` MCP tool.
   <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/07_mcp_advanced_search_options.ipynb">GitHub</a>
   <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/07_mcp_advanced_search_options.ipynb">nbviewer</a>
 </p>
+
+## 08 MCP New Cache and Search Tools
+
+Smoke-tests the new cache controls, paged reference helpers, server-scoped
+search, reader search, passage highlights, and Scaife metadata/text retrieval
+tools.
+
+<p class="link-actions">
+  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_new_cache_and_search_tools.ipynb">GitHub</a>
+  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_new_cache_and_search_tools.ipynb">nbviewer</a>
+</p>

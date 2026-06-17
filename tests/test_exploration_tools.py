@@ -1,7 +1,9 @@
+import asyncio
 import json
 
 import pytest
 
+import server
 from server import (
     _author_name_matches_from_capabilities,
     _author_resources_from_capabilities,
@@ -13,6 +15,7 @@ from server import (
     _passage_plaintext_from_xml,
     _prev_next_xml,
     _reference_urns_from_xml,
+    _valid_references_json,
     _work_resources_from_capabilities,
 )
 
@@ -154,6 +157,26 @@ def test_first_urn_xml_uses_first_valid_reference() -> None:
     assert f"<urn>{work}:1.1</urn>" in result
 
 
+def test_valid_references_json_pages_reference_urns() -> None:
+    work = "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1"
+    references_xml = f"""<GetValidReff>
+      <reply>
+        <urn>{work}:1.1</urn>
+        <urn>{work}:1.2</urn>
+        <urn>{work}:1.3</urn>
+      </reply>
+    </GetValidReff>"""
+
+    result = json.loads(
+        _valid_references_json(references_xml, work, level=1, limit=2, offset=1)
+    )
+
+    assert result["total_count"] == 3
+    assert result["returned_count"] == 2
+    assert result["has_next"] is False
+    assert result["references"] == [f"{work}:1.2", f"{work}:1.3"]
+
+
 def test_search_language_normalizes_greek_and_latin_names() -> None:
     assert _normalize_search_language("Ancient Greek") == "gr"
     assert _normalize_search_language("latin") == "la"
@@ -177,3 +200,33 @@ def test_scaife_search_response_can_be_filtered_to_author_scope() -> None:
     assert len(result["results"]) == 1
     assert result["results"][0]["urn"].startswith("urn:cts:greekLit:tlg0012")
     assert result["author_scope"]["unfiltered_page_result_count"] == 2
+
+
+def test_search_perseus_uses_server_side_text_group_for_single_author(
+    monkeypatch,
+) -> None:
+    request: dict[str, object] = {}
+
+    async def fake_get(url, params=None, timeout=20.0):
+        request.update(url=url, params=params, timeout=timeout)
+        return '{"results": [], "total_count": 0}'
+
+    async def fake_capabilities(refresh=False):
+        return CAPABILITIES_XML
+
+    monkeypatch.setattr(server, "_get", fake_get)
+    monkeypatch.setattr(server, "_get_capabilities_cached", fake_capabilities)
+
+    result = json.loads(
+        asyncio.run(
+            server.search_perseus(
+                "mh=nin",
+                language="greek",
+                query_format="betacode",
+                author="Homer",
+            )
+        )
+    )
+
+    assert request["params"]["text_group"] == "urn:cts:greekLit:tlg0012"
+    assert result["author_scope"]["note"].startswith("Author scope was sent")

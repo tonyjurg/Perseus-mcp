@@ -129,7 +129,12 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_passage_plus(urn)` → CTS `GetPassagePlus`
 - `get_passage_plaintext(urn)` → CTS `GetPassage`, then local XML text extraction
 - `get_valid_references(urn, level=None)` → CTS `GetValidReff`, optional `level`
+- `get_valid_references_json(urn, level=None, limit=100, offset=0)` → cached CTS `GetValidReff`, then local reference parsing and paging
+- `count_valid_references(urn, level=None)` → cached CTS `GetValidReff`, then local reference counting
 - `get_capabilities()` → CTS `GetCapabilities`
+- `get_cache_status()` → local metadata cache status
+- `refresh_metadata_cache()` → refresh cached CTS capabilities
+- `clear_metadata_cache()` → clear memory and disk metadata cache entries
 - `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
 - `find_author_names(query, language=None, limit=100)` → CTS `GetCapabilities`, then local partial matching against textgroup name fields only
@@ -137,7 +142,24 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_label(urn)` → CTS `GetLabel`
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed
 - `get_prev_next_urn(urn)` → CTS `GetPrevNextUrn`, with a `GetValidReff` fallback when the upstream response is malformed
-- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False)` → Scaife JSON search API with normalized Greek query text, form/lemma search, optional operator preservation, and optional local author-scope filtering
+- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False, page_num=1, text_group=None, work=None, result_format="instances")` → Scaife JSON search API with normalized Greek query text, form/lemma search, optional operator preservation, pagination, server-side textgroup/work scoping, and optional author-scope filtering
+- `search_within_text(query, text_urn, ...)` → Scaife reader search API scoped to one text/edition URN
+- `get_passage_highlights(query, passage_urn, ...)` → Scaife reader search API with `fields=highlights`
+- `get_scaife_library_metadata(urn)` → Scaife `/library/<urn>/json/`
+- `get_scaife_passage_json(urn)` → Scaife `/library/passage/<urn>/json/`
+- `get_scaife_passage_text(urn)` → Scaife `/library/passage/<urn>/text/`
+
+### Local metadata cache
+
+CTS `GetCapabilities` and `GetValidReff` responses are stable enough to cache
+for local development and are large enough that repeated live requests make the
+tools feel slow. The server caches those responses in memory and on disk under
+`.cache/perseus-mcp` by default. Cache keys include the request type, CTS base
+URL, URN, and level. Environment variables control the behavior:
+
+- `PERSEUS_MCP_CACHE_DIR`
+- `PERSEUS_MCP_CACHE_TTL_SECONDS`
+- `PERSEUS_MCP_DISABLE_CACHE`
 
 ### Author resource filtering
 
@@ -151,10 +173,11 @@ the CTS textgroup name fields and returns a narrower response for partial name
 discovery.
 
 When `search_perseus(..., author=...)` is used, the server first performs the
-Scaife search request, then resolves the author against CTS capabilities and
-filters the current Scaife result page to hits with CTS URNs under the matched
-author/work/resource URN prefixes. This is local post-filtering rather than a
-server-side Scaife scope parameter.
+author resolution against cached CTS capabilities. If the author resolves to
+exactly one CTS textgroup and no explicit `text_group` or `work` is supplied,
+the textgroup is sent to Scaife as a server-side `text_group` filter. Ambiguous
+author matches still fall back to local post-filtering of the current Scaife
+result page by CTS URN prefixes.
 
 `search_kind="lemma"` sends `kind=lemma` to Scaife; the default `form` sends
 `kind=form`. `preserve_operators=True` bypasses Beta Code auto-detection and

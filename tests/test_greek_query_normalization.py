@@ -56,8 +56,103 @@ def test_search_perseus_uses_scaife_json_search_route(monkeypatch) -> None:
     assert request["params"] == {
         "q": _normalize_greek_query("mh=nin"),
         "kind": "form",
+        "format": "instances",
         "type": "library",
         "page_num": 1,
+    }
+
+
+def test_search_perseus_accepts_page_and_scaife_scope_parameters(monkeypatch) -> None:
+    request: dict[str, object] = {}
+
+    async def fake_get(url, params=None, timeout=20.0):
+        request.update(url=url, params=params, timeout=timeout)
+        return '{"results": []}'
+
+    monkeypatch.setattr(server, "_get", fake_get)
+
+    result = asyncio.run(
+        server.search_perseus(
+            "logos",
+            language="greek",
+            query_format="unicode",
+            page_num=3,
+            text_group="urn:cts:greekLit:tlg0012",
+            work="urn:cts:greekLit:tlg0012.tlg001",
+            result_format="passages",
+        )
+    )
+
+    assert result == '{"results": []}'
+    assert request["params"] == {
+        "q": "logos",
+        "kind": "form",
+        "format": "passages",
+        "type": "library",
+        "page_num": 3,
+        "text_group": "urn:cts:greekLit:tlg0012",
+        "work": "urn:cts:greekLit:tlg0012.tlg001",
+    }
+
+
+def test_search_within_text_uses_reader_search(monkeypatch) -> None:
+    request: dict[str, object] = {}
+
+    async def fake_get(url, params=None, timeout=20.0):
+        request.update(url=url, params=params, timeout=timeout)
+        return '{"results": []}'
+
+    monkeypatch.setattr(server, "_get", fake_get)
+
+    result = asyncio.run(
+        server.search_within_text(
+            "logos",
+            text_urn="urn:cts:greekLit:tlg0012.tlg001.perseus-grc2",
+            language="greek",
+            query_format="unicode",
+            search_kind="lemma",
+            size=5,
+            offset=10,
+        )
+    )
+
+    assert result == '{"results": []}'
+    assert request["params"] == {
+        "q": "logos",
+        "kind": "lemma",
+        "type": "reader",
+        "text": "urn:cts:greekLit:tlg0012.tlg001.perseus-grc2",
+        "size": 5,
+        "offset": 10,
+        "fields": "",
+    }
+
+
+def test_get_passage_highlights_uses_reader_highlight_search(monkeypatch) -> None:
+    request: dict[str, object] = {}
+
+    async def fake_get(url, params=None, timeout=20.0):
+        request.update(url=url, params=params, timeout=timeout)
+        return '{"results": []}'
+
+    monkeypatch.setattr(server, "_get", fake_get)
+
+    result = asyncio.run(
+        server.get_passage_highlights(
+            "Î¼á¿†Î½Î¹Î½",
+            passage_urn="urn:cts:greekLit:tlg0012.tlg001.perseus-grc2:1.1",
+            query_format="unicode",
+        )
+    )
+
+    assert result == '{"results": []}'
+    assert request["params"] == {
+        "q": "Î¼á¿†Î½Î¹Î½",
+        "kind": "form",
+        "type": "reader",
+        "passage": "urn:cts:greekLit:tlg0012.tlg001.perseus-grc2:1.1",
+        "size": 1,
+        "fields": "highlights",
     }
 
 
@@ -83,6 +178,7 @@ def test_search_perseus_can_use_lemma_search_kind(monkeypatch) -> None:
     assert request["params"] == {
         "q": _normalize_greek_query("logos", query_format="betacode"),
         "kind": "lemma",
+        "format": "instances",
         "type": "library",
         "page_num": 1,
     }
@@ -109,6 +205,7 @@ def test_search_perseus_can_preserve_operator_query(monkeypatch) -> None:
     assert request["params"] == {
         "q": "μῆνιν | ἄειδε",
         "kind": "form",
+        "format": "instances",
         "type": "library",
         "page_num": 1,
     }
