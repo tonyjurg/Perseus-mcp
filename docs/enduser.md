@@ -244,11 +244,6 @@ or ask Claude to list available MCP tools. You should see the same `perseus`
 tools documented above, including `get_author_resources`,
 `get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
 
-<<<<<<< ours
-<<<<<<< ours
-=======
-=======
->>>>>>> theirs
 Claude Desktop troubleshooting notes:
 
 - If the server does not appear, validate the JSON syntax and confirm the
@@ -264,10 +259,6 @@ For background, the official MCP local-server guide uses Claude Desktop as its
 example host and documents the same `mcpServers` JSON structure and config-file
 locations: <https://modelcontextprotocol.io/docs/tutorials/use-local-mcp-server>.
 
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
 ## Generic MCP JSON Example
 
 Some clients use a JSON structure similar to Cursor's but with different file

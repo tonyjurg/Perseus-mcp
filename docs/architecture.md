@@ -286,5 +286,6 @@ To add a non-CTS endpoint:
 
 - Single-file implementation minimizes startup and maintenance overhead.
 - Async I/O is suitable for network-bound calls and concurrent tool usage.
-- No persistence/caching layer exists today; every call hits upstream services.
+- Stable CTS metadata is cached locally in memory and on disk; passage,
+  search, and Scaife reader calls still go to upstream services on demand.
 
