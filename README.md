@@ -154,6 +154,7 @@ The `examples/` directory includes Jupyter notebooks that demonstrate both direc
 - `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using NVIDIA Nemotron 3 Super (free) by default.
 - `examples/07_mcp_advanced_search_options.ipynb` — MCP form/lemma search, Scaife operator queries, and author-scoped search examples.
 - `examples/08_mcp_new_cache_and_search_tools.ipynb` — advanced demonstration of cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
+- `examples/09_openrouter_philo_politeia_analysis.ipynb` — OpenRouter-assisted, evidence-first analysis of `πολιτεία` in Philo of Alexandria using scoped MCP search results and cited passages.
 
 Run them after installing the project dependencies. The MCP notebooks use
 FastMCP's in-process client transport and call the same tools exposed to
@@ -162,7 +163,8 @@ OpenRouter API key; the MCP server itself does not.
 
 ### Configure the OpenRouter API key
 
-For `examples/06_openrouter_llm_mcp_interaction.ipynb`, copy `.env.example` to
+For `examples/06_openrouter_llm_mcp_interaction.ipynb` and
+`examples/09_openrouter_philo_politeia_analysis.ipynb`, copy `.env.example` to
 `.env` in the project root and replace the placeholder:
 
 ```dotenv

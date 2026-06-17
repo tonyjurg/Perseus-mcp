@@ -91,3 +91,14 @@ metadata/text retrieval tools with runnable assertions.
   <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_new_cache_and_search_tools.ipynb">GitHub</a>
   <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_new_cache_and_search_tools.ipynb">nbviewer</a>
 </p>
+
+## 09 OpenRouter Philo Politeia Analysis
+
+Uses scoped Perseus MCP searches to collect cited evidence for `πολιτεία` in
+Philo of Alexandria, then asks an OpenRouter-hosted LLM to synthesize the
+evidence with URN citations and explicit limits on unsupported claims.
+
+<p class="link-actions">
+  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/09_openrouter_philo_politeia_analysis.ipynb">GitHub</a>
+  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/09_openrouter_philo_politeia_analysis.ipynb">nbviewer</a>
+</p>

@@ -244,6 +244,29 @@ or ask Claude to list available MCP tools. You should see the same `perseus`
 tools documented above, including `get_author_resources`,
 `get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
 
+<<<<<<< ours
+<<<<<<< ours
+=======
+=======
+>>>>>>> theirs
+Claude Desktop troubleshooting notes:
+
+- If the server does not appear, validate the JSON syntax and confirm the
+  `--directory` path is absolute and exists.
+- Run `uv --directory /full/path/to/Perseus-mcp run server.py` manually from a
+  terminal to catch startup errors before debugging Claude.
+- Check Claude MCP logs when startup fails: `~/Library/Logs/Claude` on macOS or
+  `%APPDATA%\Claude\logs` on Windows.
+- The Perseus MCP server does not require an API key. Only the optional
+  OpenRouter notebook uses `OPENROUTER_API_KEY`.
+
+For background, the official MCP local-server guide uses Claude Desktop as its
+example host and documents the same `mcpServers` JSON structure and config-file
+locations: <https://modelcontextprotocol.io/docs/tutorials/use-local-mcp-server>.
+
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 ## Generic MCP JSON Example
 
