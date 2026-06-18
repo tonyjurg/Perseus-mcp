@@ -240,6 +240,11 @@ PY
 Errors are not swallowed:
 
 - HTTP errors from upstream propagate as exceptions.
+- A Perseus `429 Too Many Requests` response therefore reaches the client as an
+  `httpx.HTTPStatusError`. The current HTTP helper does not implement automatic
+  retry, exponential backoff, or `Retry-After` handling. Callers running passage
+  loops should limit concurrency, add pacing, and retry later rather than
+  immediately repeating the failed request.
 - Some HTTP 200 responses can still contain invalid or unexpected content; the
   first/previous/next navigation tools detect the known malformed-HTML case.
 - This is useful during research/dev because failures are explicit.

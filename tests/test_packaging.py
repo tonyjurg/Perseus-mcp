@@ -13,6 +13,7 @@ from perseus_mcp import server as package_server
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPENDABOT_CONFIG = REPO_ROOT / ".github" / "dependabot.yml"
+ENDUSER_GUIDE = REPO_ROOT / "docs" / "enduser.md"
 PUBLISH_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "publish.yml"
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 MCP_NOTEBOOKS = sorted((REPO_ROOT / "examples").glob("0[3-9]_*.ipynb")) + sorted(
@@ -110,6 +111,63 @@ def test_dependabot_tracks_python_and_github_actions_dependencies() -> None:
     assert 'package-ecosystem: "github-actions"' in configuration
     assert configuration.count('interval: "weekly"') == 2
     assert configuration.count('directory: "/"') == 2
+
+
+def test_rate_limit_guidance_is_documented() -> None:
+    guide = ENDUSER_GUIDE.read_text(encoding="utf-8")
+    notebook = (
+        REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb"
+    ).read_text(encoding="utf-8")
+
+    assert "429 Too Many Requests" in guide
+    assert "does not automatically retry" in guide
+    assert "429 Too Many Requests" in notebook
+
+
+def test_openrouter_notebooks_use_free_models_router_by_default() -> None:
+    for notebook_name in (
+        "06_openrouter_llm_mcp_interaction.ipynb",
+        "09_openrouter_philo_politeia_analysis.ipynb",
+    ):
+        notebook_path = (
+            REPO_ROOT / "examples" / notebook_name
+        )
+        notebook_json = notebook_path.read_text(encoding="utf-8")
+        notebook = json.loads(notebook_json)
+        content = "\n".join(
+            "".join(cell.get("source", [])) for cell in notebook["cells"]
+        )
+
+        assert "OPENROUTER_MODEL=openrouter/free" in content
+        assert '"openrouter/free"' in content
+        assert "resolved_model" in content
+        assert "nvidia/nemotron" not in notebook_json
+
+    tool_notebook = json.loads(
+        (
+            REPO_ROOT / "examples" / "06_openrouter_llm_mcp_interaction.ipynb"
+        ).read_text(encoding="utf-8")
+    )
+    analysis_notebook = json.loads(
+        (
+            REPO_ROOT
+            / "examples"
+            / "09_openrouter_philo_politeia_analysis.ipynb"
+        ).read_text(encoding="utf-8")
+    )
+    tool_content = "\n".join(
+        "".join(cell.get("source", [])) for cell in tool_notebook["cells"]
+    )
+    analysis_content = "\n".join(
+        "".join(cell.get("source", []))
+        for cell in analysis_notebook["cells"]
+    )
+
+    assert '"supports_tools": True' in tool_content
+    assert '"tools": tools' in tool_content
+    assert '"response_format"' in analysis_content
+    assert "different concrete models" in tool_content
+    assert "exact model reproducibility" in analysis_content
 
 
 def test_release_workflow_builds_assets_and_dispatches_publish() -> None:

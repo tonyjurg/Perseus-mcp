@@ -75,7 +75,8 @@ good reference notebook when learning what the server exposes to clients.
 ## 06 OpenRouter LLM MCP Interaction
 
 Shows an optional OpenRouter LLM tool-calling loop over the local MCP tools,
-using an OpenRouter API key supplied outside the repository.
+using an OpenRouter API key supplied outside the repository and the
+`openrouter/free` capability-aware router by default.
 
 <p class="link-actions">
   <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/06_openrouter_llm_mcp_interaction.ipynb">GitHub</a>
@@ -107,7 +108,8 @@ metadata/text retrieval tools with runnable assertions.
 
 Uses scoped Perseus MCP searches to collect cited evidence for `πολιτεία` in
 Philo of Alexandria, then asks an OpenRouter-hosted LLM to synthesize the
-evidence with URN citations and explicit limits on unsupported claims.
+evidence with URN citations and explicit limits on unsupported claims. It uses
+the Free Models Router by default while recording the concrete resolved model.
 
 <p class="link-actions">
   <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/09_openrouter_philo_politeia_analysis.ipynb">GitHub</a>

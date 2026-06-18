@@ -165,6 +165,14 @@ Notebook `06_` loads the project-root `.env` file without overriding an existing
 environment variable. The `.env` file is ignored by Git and must not be
 committed.
 
+The OpenRouter notebooks default to `OPENROUTER_MODEL=openrouter/free`. The
+Free Models Router chooses from free models available at request time and
+filters for requested capabilities such as tool calling or structured output.
+This keeps the examples flexible when an individual free model disappears or
+has no capacity. Because the concrete model can vary between calls, inspect the
+recorded `resolved_model` metadata or set `OPENROUTER_MODEL` to a fixed slug
+when reproducibility is more important than availability.
+
 You may save and commit notebook `06_` with its LLM and tool-call outputs so
 they render on GitHub. The notebook file does not store Python variables or
 kernel memory, and the implementation does not print the key. Review visible
@@ -335,6 +343,14 @@ operations, the server derives a well-formed XML result from
 ## Troubleshooting
 
 - **HTTP 4xx/5xx**: Remote service may be unavailable, URN may be invalid, or endpoint behavior may have changed.
+- **HTTP 429 Too Many Requests**: Perseus is rate-limiting the client because
+  too many CTS requests were made in a short period. This does not necessarily
+  mean that the URN is invalid. Stop the loop or batch, wait before retrying,
+  and then resume at a lower request rate. Avoid concurrent passage calls,
+  insert a delay between calls, and use the cached discovery/reference tools
+  instead of repeatedly downloading the same metadata. The server currently
+  propagates the upstream `HTTPStatusError`; it does not automatically retry a
+  `429` response.
 - **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` works manually.
 - **Client connects but the model does not call tools**: explicitly ask the model to use the `perseus` MCP tools, or use the client's tool picker/approval UI if it has one.
 - **Wrong model/provider**: model choice is controlled by your LLM client, not by this server. Keep this MCP server config the same and choose the desired model in the client.
