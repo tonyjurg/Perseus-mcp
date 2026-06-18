@@ -612,7 +612,11 @@ def _author_name_matches_from_capabilities(
     )
 
 
-def _work_resources_from_capabilities(capabilities_xml: str, urn_or_title: str) -> str:
+def _work_resources_from_capabilities(
+    capabilities_xml: str,
+    urn_or_title: str,
+    language: str | None = None,
+) -> str:
     query = _normalize_space(urn_or_title)
     if not query:
         raise ValueError("urn_or_title must not be empty")
@@ -626,13 +630,20 @@ def _work_resources_from_capabilities(capabilities_xml: str, urn_or_title: str) 
         author = _text_group_entry(text_group, include_works=False)
         for work_element in _direct_children(text_group, "work"):
             work = _work_entry(work_element)
+            if not _work_matches_language(work, language):
+                continue
             searchable = [work.get("urn"), *work.get("titles", [])]
             if not _text_matches_query(searchable, query):
                 continue
             matches.append({"author": author, "work": work})
 
     return json.dumps(
-        {"query": urn_or_title, "match_count": len(matches), "matches": matches},
+        {
+            "query": urn_or_title,
+            "language": _normalize_cts_language(language),
+            "match_count": len(matches),
+            "matches": matches,
+        },
         ensure_ascii=False,
         indent=2,
     )
@@ -1028,15 +1039,22 @@ async def find_author_names(
 
 
 @mcp.tool
-async def get_work_resources(urn_or_title: str) -> str:
+async def get_work_resources(
+    urn_or_title: str, language: str | None = None
+) -> str:
     """List editions/translations/resources for a matching work URN or title.
+
+    Optional `language` accepts values such as "greek", "grc", "latin", or
+    "lat" and filters by the original work language.
 
     Examples:
     - urn_or_title: "urn:cts:greekLit:tlg0012.tlg001"
     - urn_or_title: "Iliad"
     """
     capabilities_xml = await _get_capabilities_cached()
-    return _work_resources_from_capabilities(capabilities_xml, urn_or_title)
+    return _work_resources_from_capabilities(
+        capabilities_xml, urn_or_title, language
+    )
 
 
 @mcp.tool

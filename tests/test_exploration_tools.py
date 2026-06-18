@@ -123,6 +123,24 @@ def test_work_resources_matches_title_and_returns_author_context() -> None:
     assert result["matches"][0]["work"]["titles"] == ["Iliad"]
 
 
+def test_work_resources_filters_by_language() -> None:
+    latin_result = json.loads(
+        _work_resources_from_capabilities(
+            CAPABILITIES_XML, "Metamorphoses", language="latin"
+        )
+    )
+    greek_result = json.loads(
+        _work_resources_from_capabilities(
+            CAPABILITIES_XML, "Metamorphoses", language="greek"
+        )
+    )
+
+    assert latin_result["language"] == "lat"
+    assert latin_result["match_count"] == 1
+    assert greek_result["language"] == "grc"
+    assert greek_result["match_count"] == 0
+
+
 def test_passage_plaintext_extracts_readable_lines() -> None:
     plaintext = _passage_plaintext_from_xml(PASSAGE_XML)
 

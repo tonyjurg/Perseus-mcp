@@ -10,7 +10,7 @@ This guide explains how to install, run, and use the `perseus` MCP server in too
 
 ## What You Get
 
-The server provides tools for Greek text research against Perseus CTS and Scaife search. It is designed as a local MCP bridge: your LLM client starts this server, discovers its tools, and can then call those tools with structured arguments instead of relying on ad hoc web browsing or copied URLs.
+The server provides tools for Greek and Latin text research against Perseus CTS and Scaife search. It is designed as a local MCP bridge: your LLM client starts this server, discovers its tools, and can then call those tools with structured arguments instead of relying on ad hoc web browsing or copied URLs.
 
 Use it when you want an LLM to help with tasks such as:
 
@@ -35,7 +35,7 @@ The current implementation exposes twenty-three text-returning tools:
 - `list_text_groups(language=None, query=None, limit=100)`
 - `get_author_resources(author, language=None)`
 - `find_author_names(query, language=None, limit=100)`
-- `get_work_resources(urn_or_title)`
+- `get_work_resources(urn_or_title, language=None)`
 - `get_label(urn)`
 - `get_first_urn(urn)`
 - `get_prev_next_urn(urn)`
@@ -292,7 +292,7 @@ The discovery helpers are useful when you do not yet know the exact CTS URN to f
 - `list_text_groups(language=None, query=None, limit=100)` lists author/textgroup matches and their works. Use `language="greek"` or `language="latin"` to focus the inventory, and `query` to match author names, textgroup URNs, or work titles.
 - `get_author_resources(author, language=None)` returns detailed JSON for a matching author or textgroup, including work URNs, titles, languages, editions, translations, and other resource URNs.
 - `find_author_names(query, language=None, limit=100)` matches only CTS author/textgroup name fields, so partial queries such as `"Hom"` return author names without also matching work titles.
-- `get_work_resources(urn_or_title)` narrows directly to a work title or work URN and returns its editions/translations/resources with author context.
+- `get_work_resources(urn_or_title, language=None)` narrows directly to a work title or work URN, returns its editions/translations/resources with author context, and can restrict matches to an original work language such as `"greek"` or `"latin"`.
 - `get_passage_plaintext(urn)` fetches a passage through CTS and extracts readable text from the returned XML.
 
 Examples:
@@ -301,6 +301,7 @@ Examples:
 - `list_text_groups(language="latin", query="Ovid")`
 - `find_author_names("Hom", language="greek")`
 - `get_author_resources("urn:cts:greekLit:tlg0012", language="greek")`
+- `get_work_resources("Epistualae", language="latin")`
 - `get_work_resources("Iliad")`
 - `get_passage_plaintext("urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1")`
 

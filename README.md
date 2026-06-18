@@ -2,9 +2,9 @@
 
 # Perseus-mcp
 
-*Give Claude / Cursor / Windsurf direct access to the entire Perseus Digital Library* — ancient Greek texts, precise CTS navigation, plaintext, search, and more.
+*Give Claude / Cursor / Windsurf direct access to the Perseus Digital Library* — ancient Greek and Latin texts, precise CTS navigation, plaintext, search, and more.
 
-A high-quality MCP server specialized in Classical Greek literature. It runs as a local FastMCP server so MCP-capable applications can attach these Perseus tools to the LLM/model provider of your choice.
+A high-quality MCP server for Classical Greek and Latin literature. It runs as a local FastMCP server so MCP-capable applications can attach these Perseus tools to the LLM/model provider of your choice.
 
 ## Features
 
@@ -25,7 +25,7 @@ helpers return locally shaped JSON or readable text.
 - `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works.
 - `get_author_resources(author, language=None)` — list works, editions, and translations for a matching author name or CTS textgroup URN.
 - `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match.
-- `get_work_resources(urn_or_title)` — list editions, translations, and resources for a work.
+- `get_work_resources(urn_or_title, language=None)` — list editions, translations, and resources for a work, optionally filtered by original language.
 - `get_label(urn)` — fetch human-readable metadata labels for a URN.
 - `get_first_urn(urn)` — get the first navigable URN under a work/edition.
 - `get_prev_next_urn(urn)` — get neighboring passage URNs for navigation.
@@ -46,6 +46,11 @@ Search queries are normalized to composed Greek Unicode (NFC), matching sampled 
 The tool uses Scaife's JSON search route and returns the JSON response as text.
 The `language` argument controls Greek query normalization; it is not currently
 sent to Scaife as a corpus language filter.
+For CTS inventory discovery, `list_text_groups`, `find_author_names`,
+`get_author_resources`, and `get_work_resources` accept `language="greek"` or
+`language="latin"` (and common codes such as `grc` or `lat`) as an actual work
+language filter. Passage and navigation tools use CTS URNs, whose
+`greekLit`/`latinLit` namespace and edition identifier already select the text.
 Pass `author` to resolve a CTS author/textgroup name or URN. When it resolves
 to exactly one textgroup, Scaife receives a server-side `text_group` filter;
 ambiguous matches fall back to local CTS URN-prefix filtering of the current
@@ -144,7 +149,7 @@ npx @modelcontextprotocol/inspector uv run server.py
 
 ## Example notebooks
 
-The `examples/` directory includes Jupyter notebooks that demonstrate both direct endpoint calls and MCP client usage with real Greek data:
+The `examples/` directory includes Jupyter notebooks that demonstrate both direct endpoint calls and MCP client usage with real Greek and Latin data:
 
 - `examples/01_basic_cts_workflow.ipynb` — minimal direct CTS requests.
 - `examples/02_search_and_navigation.ipynb` — direct Scaife JSON search and CTS navigation from valid references.
@@ -153,8 +158,9 @@ The `examples/` directory includes Jupyter notebooks that demonstrate both direc
 - `examples/05_mcp_all_tools.ipynb` — complete MCP tool catalog with descriptions and input schemas.
 - `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using NVIDIA Nemotron 3 Super (free) by default.
 - `examples/07_mcp_advanced_search_options.ipynb` — MCP form/lemma search, Scaife operator queries, and author-scoped search examples.
-- `examples/08_mcp_new_cache_and_search_tools.ipynb` — advanced demonstration of cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
+- `examples/08_mcp_cache_and_search_tools.ipynb` — advanced demonstration of cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
 - `examples/09_openrouter_philo_politeia_analysis.ipynb` — OpenRouter-assisted, evidence-first analysis of `πολιτεία` in Philo of Alexandria using scoped MCP search results and cited passages.
+- `examples/10_mcp_latin_augustine_workflow.ipynb` — Latin-language discovery, CTS navigation, passage retrieval, and a small text analysis using Augustine's *Epistulae* selections.
 
 Run them after installing the project dependencies. The MCP notebooks use
 FastMCP's in-process client transport and call the same tools exposed to

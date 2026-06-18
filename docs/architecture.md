@@ -138,7 +138,7 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
 - `find_author_names(query, language=None, limit=100)` → CTS `GetCapabilities`, then local partial matching against textgroup name fields only
-- `get_work_resources(urn_or_title)` → CTS `GetCapabilities`, then local work filtering and JSON shaping
+- `get_work_resources(urn_or_title, language=None)` → CTS `GetCapabilities`, then local work/language filtering and JSON shaping
 - `get_label(urn)` → CTS `GetLabel`
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed
 - `get_prev_next_urn(urn)` → CTS `GetPrevNextUrn`, with a `GetValidReff` fallback when the upstream response is malformed

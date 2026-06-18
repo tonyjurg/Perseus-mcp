@@ -1,6 +1,6 @@
 ---
 title: Example Notebooks
-description: Notebook examples for direct CTS access, MCP client use, Greek search, and optional LLM tool calling.
+description: Notebook examples for direct CTS access, MCP client use, Greek and Latin workflows, and optional LLM tool calling.
 permalink: /notebooks/
 ---
 
@@ -81,15 +81,15 @@ author-scoped search through the `search_perseus` MCP tool.
   <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/07_mcp_advanced_search_options.ipynb">nbviewer</a>
 </p>
 
-## 08 MCP New Cache and Search Tools
+## 08 MCP Cache and Search Tools
 
 Demonstrates the advanced cache controls, paged reference helpers,
 server-scoped search, reader search, passage highlights, and Scaife
 metadata/text retrieval tools with runnable assertions.
 
 <p class="link-actions">
-  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_new_cache_and_search_tools.ipynb">GitHub</a>
-  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_new_cache_and_search_tools.ipynb">nbviewer</a>
+  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_cache_and_search_tools.ipynb">GitHub</a>
+  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/08_mcp_cache_and_search_tools.ipynb">nbviewer</a>
 </p>
 
 ## 09 OpenRouter Philo Politeia Analysis
@@ -101,4 +101,15 @@ evidence with URN citations and explicit limits on unsupported claims.
 <p class="link-actions">
   <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/09_openrouter_philo_politeia_analysis.ipynb">GitHub</a>
   <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/09_openrouter_philo_politeia_analysis.ipynb">nbviewer</a>
+</p>
+
+## 10 MCP Latin Augustine Workflow
+
+Uses `language="latin"` for CTS inventory discovery, selects Augustine's
+advertised *Epistulae* edition, retrieves valid references and Latin plaintext,
+and performs a small reproducible token analysis.
+
+<p class="link-actions">
+  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/10_mcp_latin_augustine_workflow.ipynb">GitHub</a>
+  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/10_mcp_latin_augustine_workflow.ipynb">nbviewer</a>
 </p>
