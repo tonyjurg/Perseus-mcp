@@ -144,7 +144,7 @@ uv run --extra dev pytest
 ### 3) Run locally
 
 ```bash
-uv run server.py
+uv run perseus-mcp
 ```
 
 The installed console command and module entry point are equivalent:
@@ -157,7 +157,7 @@ python -m perseus_mcp
 ### 4) Inspect tools (optional)
 
 ```bash
-npx @modelcontextprotocol/inspector uv run server.py
+npx @modelcontextprotocol/inspector uv run perseus-mcp
 ```
 
 
@@ -215,10 +215,10 @@ The command should produce no output. It does not match the documented
 This project does not require a specific LLM. Configure your client to launch the local MCP server with:
 
 ```bash
-uv --directory /full/path/to/Perseus-mcp run server.py
+uv --directory /full/path/to/Perseus-mcp run perseus-mcp
 ```
 
-Most MCP clients need the same pieces: server name `perseus`, command `uv`, args `--directory /full/path/to/Perseus-mcp run server.py`, and an empty environment unless you have local customizations. See `docs/enduser.md` for generic client guidance and `docs/architecture.md` for the architecture choices, including why FastMCP is used.
+Most MCP clients need the same pieces: server name `perseus`, command `uv`, args `--directory /full/path/to/Perseus-mcp run perseus-mcp`, and an empty environment unless you have local customizations. See `docs/enduser.md` for generic client guidance and `docs/architecture.md` for the architecture choices, including why FastMCP is used.
 
 ### Claude Desktop and Claude Code
 
@@ -231,7 +231,7 @@ The server runs with Claude over stdio, with no OpenRouter or API key required (
   "mcpServers": {
     "perseus": {
       "command": "uv",
-      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "server.py"]
+      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "perseus-mcp"]
     }
   }
 }
@@ -242,7 +242,7 @@ Restart Claude Desktop; the Perseus tools appear in the tools list.
 **Claude Code** — one line:
 
 ```bash
-claude mcp add perseus -- uv --directory /full/path/to/Perseus-mcp run server.py
+claude mcp add perseus -- uv --directory /full/path/to/Perseus-mcp run perseus-mcp
 ```
 
 Verified against a stdio MCP handshake: all 23 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).

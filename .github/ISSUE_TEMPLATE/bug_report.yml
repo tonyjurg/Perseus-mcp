@@ -24,7 +24,7 @@ body:
       label: Steps to reproduce
       description: Include commands, client actions, tool calls, and arguments.
       placeholder: |
-        1. Run `uv run server.py`
+        1. Run `uv run perseus-mcp`
         2. Call `search_perseus` with ...
         3. See error ...
     validations:

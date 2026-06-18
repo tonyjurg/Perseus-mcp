@@ -17,14 +17,14 @@ The project is intended for classicists, students, developers, and LLM clients. 
 
 - [GitHub repository](https://github.com/tonyjurg/Perseus-mcp): Source code, README, tests, notebooks, issues, and releases.
 - [README](https://github.com/tonyjurg/Perseus-mcp/blob/main/README.md): Repository-level overview, installation instructions, tool catalog, examples, and client configuration.
-- [Python server](https://github.com/tonyjurg/Perseus-mcp/blob/main/server.py): FastMCP server implementation and tool definitions.
+- [Python server](https://github.com/tonyjurg/Perseus-mcp/blob/main/src/perseus_mcp/server.py): FastMCP server implementation and tool definitions.
 - [Example notebooks on GitHub](https://github.com/tonyjurg/Perseus-mcp/tree/main/examples): Executable research and integration examples.
 - [Issue tracker](https://github.com/tonyjurg/Perseus-mcp/issues): Bug reports, documentation issues, feature requests, and upstream service problems.
 
 ## Recommended usage path
 
 1. Read the end-user guide and install the project.
-2. Configure an MCP-capable client to run `uv --directory /full/path/to/Perseus-mcp run server.py`.
+2. Configure an MCP-capable client to run `uv --directory /full/path/to/Perseus-mcp run perseus-mcp`.
 3. Discover an author, work, or CTS URN with the resource-discovery tools.
 4. Retrieve plaintext or raw CTS XML, search Scaife, or navigate adjacent passages.
 5. Verify important claims against the returned URNs and upstream source data.

@@ -6,7 +6,6 @@ on:
       - pyproject.toml
       - MANIFEST.in
       - src/**
-      - server.py
       - README.md
       - LICENSE
       - .github/workflows/package.yml
@@ -15,7 +14,6 @@ on:
       - pyproject.toml
       - MANIFEST.in
       - src/**
-      - server.py
       - README.md
       - LICENSE
       - .github/workflows/package.yml

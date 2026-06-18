@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from server import _author_resources_from_capabilities
+from perseus_mcp.server import _author_resources_from_capabilities
 
 
 CAPABILITIES_XML = """<?xml version="1.0" encoding="UTF-8"?>

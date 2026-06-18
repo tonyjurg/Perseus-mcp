@@ -2,8 +2,12 @@ import asyncio
 
 import pytest
 
-import server
-from server import _normalize_greek_query, _normalize_language, _normalize_search_kind
+from perseus_mcp import server
+from perseus_mcp.server import (
+    _normalize_greek_query,
+    _normalize_language,
+    _normalize_search_kind,
+)
 
 
 def test_explicit_betacode_search_query_becomes_unicode_greek() -> None:

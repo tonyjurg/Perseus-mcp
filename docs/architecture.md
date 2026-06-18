@@ -14,7 +14,6 @@ The server is a single-process Python MCP tool host built with FastMCP:
 
 - **Implementation**: `src/perseus_mcp/server.py`
 - **Installed entry points**: `perseus-mcp` and `python -m perseus_mcp`
-- **Repository compatibility launcher**: `server.py`
 - **MCP host**: `mcp = FastMCP("perseus")`
 - **Transport/runtime**: provided by FastMCP when calling `mcp.run()`
 
@@ -67,7 +66,7 @@ provides several practical benefits:
   `get_valid_references(urn: str, level: int | None = None)` describe the input
   contract in code and are surfaced to MCP clients.
 - **Standard local transport for many LLM clients**: clients such as Cursor,
-  Claude Desktop, and MCP Inspector can launch the same `uv run server.py`
+  Claude Desktop, and MCP Inspector can launch the same `uv run perseus-mcp`
   command over stdio. The server does not need a custom HTTP wrapper per LLM.
 - **Async-friendly network calls**: the tools perform remote HTTP requests, so
   an async server and `httpx.AsyncClient` fit the workload naturally.

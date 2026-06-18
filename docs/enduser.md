@@ -94,13 +94,13 @@ pip install -e .
 ## Run the Server
 
 ```bash
-uv run server.py
+uv run perseus-mcp
 ```
 
 ## Quick Tool Testing (Inspector)
 
 ```bash
-npx @modelcontextprotocol/inspector uv run server.py
+npx @modelcontextprotocol/inspector uv run perseus-mcp
 ```
 
 Use the inspector UI to call tools and verify responses.
@@ -113,7 +113,7 @@ a model from its supported providers. The same local server command is the key
 piece of configuration:
 
 ```bash
-uv --directory /full/path/to/Perseus-mcp run server.py
+uv --directory /full/path/to/Perseus-mcp run perseus-mcp
 ```
 
 When configuring a client, map that command into the client's MCP-server config.
@@ -123,7 +123,7 @@ Most clients ask for the same conceptual fields:
 | --- | --- |
 | Server name | `perseus` |
 | Command | `uv` |
-| Arguments | `--directory`, `/full/path/to/Perseus-mcp`, `run`, `server.py` |
+| Arguments | `--directory`, `/full/path/to/Perseus-mcp`, `run`, `perseus-mcp` |
 | Environment | usually empty |
 | Transport | stdio/local process, if the client asks |
 
@@ -191,7 +191,7 @@ Example:
   "mcpServers": {
     "perseus": {
       "command": "uv",
-      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "server.py"],
+      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "perseus-mcp"],
       "env": {}
     }
   }
@@ -226,7 +226,7 @@ Add or merge the `perseus` entry under `mcpServers`:
         "--directory",
         "/full/path/to/Perseus-mcp",
         "run",
-        "server.py"
+        "perseus-mcp"
       ],
       "env": {}
     }
@@ -248,7 +248,7 @@ Claude Desktop troubleshooting notes:
 
 - If the server does not appear, validate the JSON syntax and confirm the
   `--directory` path is absolute and exists.
-- Run `uv --directory /full/path/to/Perseus-mcp run server.py` manually from a
+- Run `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` manually from a
   terminal to catch startup errors before debugging Claude.
 - Check Claude MCP logs when startup fails: `~/Library/Logs/Claude` on macOS or
   `%APPDATA%\Claude\logs` on Windows.
@@ -273,7 +273,7 @@ locations. If your client supports local stdio MCP servers, adapt this shape:
         "--directory",
         "/full/path/to/Perseus-mcp",
         "run",
-        "server.py"
+        "perseus-mcp"
       ],
       "env": {}
     }
@@ -335,7 +335,7 @@ operations, the server derives a well-formed XML result from
 ## Troubleshooting
 
 - **HTTP 4xx/5xx**: Remote service may be unavailable, URN may be invalid, or endpoint behavior may have changed.
-- **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run server.py` works manually.
+- **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` works manually.
 - **Client connects but the model does not call tools**: explicitly ask the model to use the `perseus` MCP tools, or use the client's tool picker/approval UI if it has one.
 - **Wrong model/provider**: model choice is controlled by your LLM client, not by this server. Keep this MCP server config the same and choose the desired model in the client.
 - **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument uses a server-side Scaife `text_group` filter when it resolves to one textgroup, and otherwise falls back to local filtering over the current result page.

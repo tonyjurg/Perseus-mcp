@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-import server
-from server import (
+from perseus_mcp import server
+from perseus_mcp.server import (
     _author_name_matches_from_capabilities,
     _author_resources_from_capabilities,
     _first_urn_xml,

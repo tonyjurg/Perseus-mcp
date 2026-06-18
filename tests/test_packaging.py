@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib.metadata
 import importlib.util
 import json
-import sys
 import tomllib
 from pathlib import Path
 
@@ -49,14 +48,6 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
     )
 
 
-def test_repository_launcher_aliases_packaged_server_module() -> None:
-    sys.modules.pop("server", None)
-    root_server = importlib.import_module("server")
-
-    assert root_server is package_server
-    assert root_server.mcp is package_server.mcp
-
-
 def test_main_runs_registered_mcp_server(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(package_server.mcp, "run", lambda: calls.append("run"))
@@ -72,6 +63,10 @@ def test_package_module_entry_point_exists() -> None:
     assert specification is not None
     assert specification.origin is not None
     assert specification.origin.endswith("__main__.py")
+
+
+def test_no_legacy_root_server_launcher_exists() -> None:
+    assert not (REPO_ROOT / "server.py").exists()
 
 
 def test_mcp_notebooks_import_the_packaged_server() -> None:
