@@ -1,5 +1,6 @@
 import asyncio
 import json
+import stat
 
 import pytest
 
@@ -14,6 +15,7 @@ from perseus_mcp.server import (
     _normalize_search_language,
     _passage_plaintext_from_xml,
     _prev_next_xml,
+    _remove_readonly_cache_entry,
     _reference_urns_from_xml,
     _valid_references_json,
     _work_resources_from_capabilities,
@@ -198,6 +200,34 @@ def test_valid_references_json_pages_reference_urns() -> None:
 def test_search_language_normalizes_greek_and_latin_names() -> None:
     assert _normalize_search_language("Ancient Greek") == "gr"
     assert _normalize_search_language("latin") == "la"
+
+
+def test_clear_cache_removes_readonly_directories(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    cache_dir = tmp_path / "perseus-mcp"
+    protected_dir = cache_dir / "capabilities"
+    protected_dir.mkdir(parents=True)
+    (protected_dir / "metadata.xml").write_text("<xml/>", encoding="utf-8")
+    protected_dir.chmod(stat.S_IREAD)
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(cache_dir))
+
+    result = json.loads(server._clear_cache())
+
+    assert result["disk_cache_removed"] is True
+    assert not cache_dir.exists()
+
+
+def test_remove_readonly_cache_entry_reraises_other_errors(tmp_path) -> None:
+    error = OSError("not a permissions error")
+
+    with pytest.raises(OSError, match="not a permissions error"):
+        _remove_readonly_cache_entry(
+            lambda path: None,
+            str(tmp_path),
+            (OSError, error, None),
+        )
 
 
 def test_scaife_search_response_can_be_filtered_to_author_scope() -> None:

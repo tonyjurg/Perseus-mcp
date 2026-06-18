@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import re
+import shutil
+import stat
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -233,12 +234,26 @@ def _cache_status() -> str:
     )
 
 
+def _remove_readonly_cache_entry(function, path: str, exc_info) -> None:
+    """Make a protected cache entry writable and retry its removal.
+
+    OneDrive can mark synchronized directories as read-only reparse points on
+    Windows. ``shutil.rmtree`` cannot remove those directories until the
+    read-only attribute is cleared.
+    """
+    error = exc_info[1]
+    if not isinstance(error, PermissionError):
+        raise error
+    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+    function(path)
+
+
 def _clear_cache() -> str:
     _MEMORY_CACHE.clear()
     cache_dir = _cache_dir()
     removed = cache_dir.exists()
     if removed:
-        shutil.rmtree(cache_dir)
+        shutil.rmtree(cache_dir, onerror=_remove_readonly_cache_entry)
     return json.dumps(
         {"cache_dir": str(cache_dir), "memory_entries": 0, "disk_cache_removed": removed},
         ensure_ascii=False,

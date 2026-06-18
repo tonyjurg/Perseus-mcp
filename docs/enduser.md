@@ -70,6 +70,10 @@ while a notebook kernel started inside `examples/` would otherwise use
 means two separate Python processes can have separate disk cache directories
 and separate in-memory caches. Set `PERSEUS_MCP_CACHE_DIR` to one absolute path
 when you want notebooks and MCP clients to share the same disk cache.
+On Windows, OneDrive may mark synchronized cache directories as read-only
+reparse points. `clear_metadata_cache()` clears that attribute before retrying
+deletion. A directory actively locked by OneDrive or another process may still
+need the other process to release it first.
 
 ## Prerequisites
 

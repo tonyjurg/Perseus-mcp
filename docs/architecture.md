@@ -162,6 +162,10 @@ URL, URN, and level. Environment variables control the behavior:
 - `PERSEUS_MCP_CACHE_TTL_SECONDS`
 - `PERSEUS_MCP_DISABLE_CACHE`
 
+Cache clearing uses a `shutil.rmtree` permission handler that makes protected
+entries writable and retries removal. This handles the common Windows/OneDrive
+case where synchronized cache directories are read-only reparse points.
+
 The default disk cache path is relative to `Path.cwd()` for the running Python
 process. A notebook kernel launched from `examples/` and an MCP server launched
 from the repository root are separate Python processes, so each has its own

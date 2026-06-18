@@ -141,7 +141,7 @@ def test_openrouter_notebooks_use_free_models_router_by_default() -> None:
         assert "OPENROUTER_MODEL=openrouter/free" in content
         assert '"openrouter/free"' in content
         assert "resolved_model" in content
-        assert "nvidia/nemotron" not in notebook_json
+        assert "nvidia/nemotron" not in content
 
     tool_notebook = json.loads(
         (
