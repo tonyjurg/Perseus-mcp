@@ -13,6 +13,7 @@ from perseus_mcp import server as package_server
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
+DEPENDABOT_CONFIG = REPO_ROOT / ".github" / "dependabot.yml"
 PUBLISH_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "publish.yml"
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 MCP_NOTEBOOKS = sorted((REPO_ROOT / "examples").glob("0[3-9]_*.ipynb")) + sorted(
@@ -104,6 +105,16 @@ def test_installation_notebook_documents_supported_launch_methods() -> None:
     assert "uv --directory /full/path/to/Perseus-mcp run perseus-mcp" in content
     assert '"args": ["-m", "perseus_mcp"]' in content
     assert "npx @modelcontextprotocol/inspector perseus-mcp" in content
+
+
+def test_dependabot_tracks_python_and_github_actions_dependencies() -> None:
+    configuration = DEPENDABOT_CONFIG.read_text(encoding="utf-8")
+
+    assert configuration.startswith("version: 2")
+    assert 'package-ecosystem: "pip"' in configuration
+    assert 'package-ecosystem: "github-actions"' in configuration
+    assert configuration.count('interval: "weekly"') == 2
+    assert configuration.count('directory: "/"') == 2
 
 
 def test_release_workflow_builds_assets_and_dispatches_publish() -> None:
