@@ -165,6 +165,7 @@ npx @modelcontextprotocol/inspector uv run server.py
 
 The `examples/` directory includes Jupyter notebooks that demonstrate both direct endpoint calls and MCP client usage with real Greek and Latin data:
 
+- `examples/00_install_and_run_perseus_mcp.ipynb` — installation and launch guide covering PyPI, pip, uv, local repository development, MCP client configuration, verification, upgrades, and troubleshooting.
 - `examples/01_basic_cts_workflow.ipynb` — minimal direct CTS requests.
 - `examples/02_search_and_navigation.ipynb` — direct Scaife JSON search and CTS navigation from valid references.
 - `examples/03_mcp_connection_homer_iliad.ipynb` — FastMCP client connection, Homer resource discovery, and *Iliad* Greek passage analysis.

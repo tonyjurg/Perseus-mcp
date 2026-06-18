@@ -11,6 +11,17 @@ Perseus MCP workflow from direct endpoint exploration through full MCP tool
 calling. Each notebook can be opened directly on GitHub or viewed through
 nbviewer for a cleaner rendered notebook view.
 
+## 00 Install and Run Perseus MCP
+
+Explains the supported installation and launch options: PyPI with pip, isolated
+uv tools, repository-local development, MCP client configuration, verification,
+upgrades, uninstalling, and common setup failures.
+
+<p class="link-actions">
+  <a href="https://github.com/tonyjurg/Perseus-mcp/blob/main/examples/00_install_and_run_perseus_mcp.ipynb">GitHub</a>
+  <a href="https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/00_install_and_run_perseus_mcp.ipynb">nbviewer</a>
+</p>
+
 ## 01 Basic CTS Workflow
 
 A minimal introduction to direct CTS requests. This notebook is useful for

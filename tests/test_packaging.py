@@ -89,6 +89,23 @@ def test_mcp_notebooks_import_the_packaged_server() -> None:
         assert "\nimport server\n" not in f"\n{code}\n"
 
 
+def test_installation_notebook_documents_supported_launch_methods() -> None:
+    notebook_path = (
+        REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb"
+    )
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+    content = "\n".join(
+        "".join(cell.get("source", [])) for cell in notebook["cells"]
+    )
+
+    assert notebook["nbformat"] == 4
+    assert "python -m pip install perseus-mcp" in content
+    assert "uv tool install perseus-mcp" in content
+    assert "uv --directory /full/path/to/Perseus-mcp run perseus-mcp" in content
+    assert '"args": ["-m", "perseus_mcp"]' in content
+    assert "npx @modelcontextprotocol/inspector perseus-mcp" in content
+
+
 def test_release_workflow_builds_assets_and_dispatches_publish() -> None:
     workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
 
