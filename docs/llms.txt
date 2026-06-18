@@ -1,0 +1,34 @@
+# Perseus MCP
+
+> Perseus MCP is a local FastMCP server that gives MCP-capable clients structured tools for discovering, searching, retrieving, and navigating Greek and Latin texts through the Perseus CTS and Scaife services.
+
+The project is intended for classicists, students, developers, and LLM clients. The server runs locally over stdio, requires Python 3.11 or newer, and does not require an API key for its Perseus or Scaife operations.
+
+## Documentation
+
+- [Documentation home](https://tonyjurg.github.io/Perseus-mcp/): Project overview, documentation map, quick-start commands, and responsible-disclosure note.
+- [End-user guide](https://tonyjurg.github.io/Perseus-mcp/enduser/): Installation, MCP client configuration, available tools, prompting workflow, URN guidance, cache behavior, and troubleshooting.
+- [Architecture](https://tonyjurg.github.io/Perseus-mcp/architecture/): Internal design, FastMCP rationale, upstream services, request flow, caching, query normalization, data contracts, fallbacks, and extension points.
+- [Example notebooks](https://tonyjurg.github.io/Perseus-mcp/notebooks/): Guided examples covering CTS access, MCP calls, Greek and Latin research, search and navigation, cache controls, and optional OpenRouter integration.
+- [Contributing](https://tonyjurg.github.io/Perseus-mcp/contributing/): Bug reports, feature requests, development setup, pull-request expectations, documentation changes, and credential safety.
+- [License](https://tonyjurg.github.io/Perseus-mcp/license/): MIT License terms.
+
+## Primary project resources
+
+- [GitHub repository](https://github.com/tonyjurg/Perseus-mcp): Source code, README, tests, notebooks, issues, and releases.
+- [README](https://github.com/tonyjurg/Perseus-mcp/blob/main/README.md): Repository-level overview, installation instructions, tool catalog, examples, and client configuration.
+- [Python server](https://github.com/tonyjurg/Perseus-mcp/blob/main/server.py): FastMCP server implementation and tool definitions.
+- [Example notebooks on GitHub](https://github.com/tonyjurg/Perseus-mcp/tree/main/examples): Executable research and integration examples.
+- [Issue tracker](https://github.com/tonyjurg/Perseus-mcp/issues): Bug reports, documentation issues, feature requests, and upstream service problems.
+
+## Recommended usage path
+
+1. Read the end-user guide and install the project.
+2. Configure an MCP-capable client to run `uv --directory /full/path/to/Perseus-mcp run server.py`.
+3. Discover an author, work, or CTS URN with the resource-discovery tools.
+4. Retrieve plaintext or raw CTS XML, search Scaife, or navigate adjacent passages.
+5. Verify important claims against the returned URNs and upstream source data.
+
+## Scope and data sources
+
+Perseus MCP is an adapter, not a local corpus or independent textual authority. Its availability and results depend on the public Perseus CTS and Scaife services. Raw XML and JSON remain available where source fidelity matters, while convenience tools provide locally shaped JSON, plaintext, caching, and navigation fallbacks.
