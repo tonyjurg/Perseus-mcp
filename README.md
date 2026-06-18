@@ -100,6 +100,11 @@ The live Perseus CTS implementation may return malformed HTML for
 `GetFirstUrn` and `GetPrevNextUrn`. The MCP tools detect that response and
 derive valid XML results from `GetValidReff`.
 
+Perseus may also return `429 Too Many Requests` when a workflow sends many CTS
+requests in a short period. Pause before retrying, reduce concurrency, and add
+delays to passage-processing loops. The server currently exposes the upstream
+HTTP error instead of retrying automatically.
+
 ## Setup
 
 ### 1) Install dependencies
@@ -171,7 +176,7 @@ The `examples/` directory includes Jupyter notebooks that demonstrate both direc
 - `examples/03_mcp_connection_homer_iliad.ipynb` — FastMCP client connection, Homer resource discovery, and *Iliad* Greek passage analysis.
 - `examples/04_mcp_greek_search_and_navigation.ipynb` — MCP Greek search with Unicode/Beta Code, valid references, and passage navigation.
 - `examples/05_mcp_all_tools.ipynb` — complete MCP tool catalog with descriptions and input schemas.
-- `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using NVIDIA Nemotron 3 Super (free) by default.
+- `examples/06_openrouter_llm_mcp_interaction.ipynb` — optional OpenRouter LLM tool-calling loop over the local MCP tools, using OpenRouter's Free Models Router by default.
 - `examples/07_mcp_advanced_search_options.ipynb` — MCP form/lemma search, Scaife operator queries, and author-scoped search examples.
 - `examples/08_mcp_cache_and_search_tools.ipynb` — advanced demonstration of cache tools, paged references, scoped search, reader search, highlights, and Scaife metadata/text retrieval.
 - `examples/09_openrouter_philo_politeia_analysis.ipynb` — OpenRouter-assisted, evidence-first analysis of `πολιτεία` in Philo of Alexandria using scoped MCP search results and cited passages.
@@ -197,6 +202,15 @@ Get your API key at [openrouter.ai](https://openrouter.ai/settings/keys). See
 authentication details.
 The `.env` file is ignored by Git. You can also set `OPENROUTER_API_KEY` in your
 environment or enter it securely when the notebook prompts.
+
+Both OpenRouter notebooks default to `openrouter/free`. This router selects
+among free models currently available on OpenRouter and filters for capabilities
+required by the request, such as tool calling or structured output. It avoids
+binding the examples to one free model that may later be removed or temporarily
+unavailable. The tradeoff is reduced reproducibility: separate runs may use
+different concrete models, so the notebooks record the resolved model returned
+by OpenRouter. Set `OPENROUTER_MODEL` to a fixed model slug when exact model
+selection matters.
 
 Notebook `06_` can be saved and committed with its LLM and tool-call outputs so
 they render on GitHub. Python variables and kernel memory are not stored in an
