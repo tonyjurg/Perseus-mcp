@@ -280,9 +280,9 @@ in CI without publishing them.
 The release automation follows the same trusted-publishing pattern as
 MorphKit:
 
-1. Set the release version in `pyproject.toml`, for example `0.1.0`.
+1. Set the release version in `pyproject.toml`, for example `1.0.0`.
 2. Merge the version change to the commit that should be released.
-3. Create and push the matching tag, for example `v0.1.0`.
+3. Create and push the matching tag, for example `v1.0.0`.
 4. The `Build release artifacts` workflow verifies the tag/version match,
    builds and validates both distributions, and attaches them to a generated
    GitHub release.
@@ -298,8 +298,8 @@ Configure the repository once before the first automated upload:
 - Do not add a PyPI API token; the workflow uses GitHub OIDC with
   `id-token: write`.
 
-The workflows reject a tag such as `v0.2.0` when `project.version` is still
-`0.1.0`. PyPI versions are immutable, so increment the version before retrying
+The workflows reject a tag such as `v1.1.0` when `project.version` is still
+`1.0.0`. PyPI versions are immutable, so increment the version before retrying
 a release that was already uploaded.
 
 ## Contributing and reporting issues

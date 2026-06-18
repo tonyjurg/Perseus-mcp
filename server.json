@@ -2,7 +2,7 @@
   "name": "perseus",
   "displayName": "Perseus MCP",
   "description": "MCP server for the Perseus Digital Library — ancient Greek and Latin texts with CTS navigation and Scaife search",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "license": "MIT",
   "transport": "stdio",
   "command": "uv",

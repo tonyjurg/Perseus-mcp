@@ -79,8 +79,8 @@ published files cannot be replaced under the same version.
 ## Automated Releases
 
 Production releases use GitHub Actions and PyPI trusted publishing. Push a tag
-that exactly matches the package version with a leading `v`, such as `v0.1.0`
-for `project.version = "0.1.0"`.
+that exactly matches the package version with a leading `v`, such as `v1.0.0`
+for `project.version = "1.0.0"`.
 
 The release workflow builds and validates the wheel and source archive, creates
 a GitHub release containing those artifacts, and dispatches the separate
