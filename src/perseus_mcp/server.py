@@ -237,15 +237,28 @@ def _cache_status() -> str:
 def _remove_readonly_cache_entry(function, path: str, exc_info) -> None:
     """Make a protected cache entry writable and retry its removal.
 
-    OneDrive can mark synchronized directories as read-only reparse points on
-    Windows. ``shutil.rmtree`` cannot remove those directories until the
-    read-only attribute is cleared.
+    ``shutil.rmtree`` may report a protected directory through a traversal
+    operation such as ``os.open`` or ``os.scandir``. Retrying that operation
+    alone does not resume the removal, so remove the now-writable subtree
+    recursively in that case.
     """
     error = exc_info[1]
     if not isinstance(error, PermissionError):
         raise error
-    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-    function(path)
+
+    writable_mode = stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC
+    os.chmod(path, writable_mode)
+    if function in (os.open, os.scandir):
+        shutil.rmtree(path, onerror=_remove_readonly_cache_entry)
+        return
+
+    try:
+        function(path)
+    except PermissionError:
+        # Unix requires write and execute permissions on the containing
+        # directory before an entry can be unlinked.
+        os.chmod(os.path.dirname(path), writable_mode)
+        function(path)
 
 
 def _clear_cache() -> str:
