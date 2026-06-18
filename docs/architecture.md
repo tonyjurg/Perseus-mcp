@@ -12,7 +12,9 @@ This document explains internal design, request flow, and extension points for t
 
 The server is a single-process Python MCP tool host built with FastMCP:
 
-- **Entry point**: `server.py`
+- **Implementation**: `src/perseus_mcp/server.py`
+- **Installed entry points**: `perseus-mcp` and `python -m perseus_mcp`
+- **Repository compatibility launcher**: `server.py`
 - **MCP host**: `mcp = FastMCP("perseus")`
 - **Transport/runtime**: provided by FastMCP when calling `mcp.run()`
 

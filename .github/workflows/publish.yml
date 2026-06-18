@@ -1,0 +1,66 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    environment: pypi
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          ref = os.environ["GITHUB_REF"]
+          if not ref.startswith("refs/tags/v"):
+              raise SystemExit(
+                  "PyPI publishing must run from a v* tag, "
+                  f"not {ref!r}."
+              )
+          version = tomllib.loads(
+              Path("pyproject.toml").read_text(encoding="utf-8")
+          )["project"]["version"]
+          tag = os.environ["GITHUB_REF_NAME"]
+          expected_tag = f"v{version}"
+          if tag != expected_tag:
+              raise SystemExit(
+                  f"Release tag {tag!r} does not match package version "
+                  f"{version!r}; expected {expected_tag!r}."
+              )
+          print(f"Verified package version {version} against tag {tag}.")
+          PY
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Validate package metadata
+        run: python -m twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

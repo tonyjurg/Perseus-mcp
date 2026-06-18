@@ -63,6 +63,38 @@ With `uv`:
 uv run --extra dev pytest
 ```
 
+## Build Release Artifacts
+
+Build and validate the wheel and source distribution before publishing:
+
+```bash
+python -m build
+python -m twine check dist/*
+```
+
+Test the wheel in a clean virtual environment. Upload to TestPyPI before the
+production PyPI index. Every release needs a new version in `pyproject.toml`;
+published files cannot be replaced under the same version.
+
+## Automated Releases
+
+Production releases use GitHub Actions and PyPI trusted publishing. Push a tag
+that exactly matches the package version with a leading `v`, such as `v0.1.0`
+for `project.version = "0.1.0"`.
+
+The release workflow builds and validates the wheel and source archive, creates
+a GitHub release containing those artifacts, and dispatches the separate
+PyPI-publishing workflow. The publishing job runs in the GitHub environment
+named `pypi` and authenticates to PyPI through OIDC rather than a stored API
+token.
+
+The PyPI trusted publisher must be configured for:
+
+- owner: `tonyjurg`;
+- repository: `Perseus-mcp`;
+- workflow: `publish.yml`;
+- environment: `pypi`.
+
 Keep pull requests narrowly scoped. A good pull request usually contains:
 
 - a clear description of the change;

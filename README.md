@@ -116,6 +116,13 @@ Or with `pip`:
 pip install -e .
 ```
 
+Once a release is published to PyPI, users can install it without cloning the
+repository:
+
+```bash
+pip install perseus-mcp
+```
+
 For development and tests:
 
 ```bash
@@ -138,6 +145,13 @@ uv run --extra dev pytest
 
 ```bash
 uv run server.py
+```
+
+The installed console command and module entry point are equivalent:
+
+```bash
+perseus-mcp
+python -m perseus_mcp
 ```
 
 ### 4) Inspect tools (optional)
@@ -231,6 +245,62 @@ claude mcp add perseus -- uv --directory /full/path/to/Perseus-mcp run server.py
 ```
 
 Verified against a stdio MCP handshake: all 23 tools register and live calls return (tested with `search_perseus` and `list_text_groups`).
+
+## Build a PyPI distribution
+
+Install the development dependencies, then build and validate both distribution
+formats:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m build
+python -m twine check dist/*
+```
+
+The build creates a wheel and source archive under `dist/`. Test the wheel in a
+clean virtual environment before publishing. Upload to TestPyPI first:
+
+```bash
+python -m twine upload --repository testpypi dist/*
+```
+
+After verifying installation from TestPyPI, upload the same artifacts to PyPI:
+
+```bash
+python -m twine upload dist/*
+```
+
+PyPI does not allow replacing an existing release. Update `project.version` in
+`pyproject.toml`, rebuild from a clean `dist/` directory, and publish each
+version only once. The package build workflow also builds and checks artifacts
+in CI without publishing them.
+
+### Automated GitHub release and PyPI publishing
+
+The release automation follows the same trusted-publishing pattern as
+MorphKit:
+
+1. Set the release version in `pyproject.toml`, for example `0.1.0`.
+2. Merge the version change to the commit that should be released.
+3. Create and push the matching tag, for example `v0.1.0`.
+4. The `Build release artifacts` workflow verifies the tag/version match,
+   builds and validates both distributions, and attaches them to a generated
+   GitHub release.
+5. That workflow dispatches `Publish to PyPI`, which rebuilds and validates the
+   package before publishing through PyPI trusted publishing.
+
+Configure the repository once before the first automated upload:
+
+- Create a GitHub Actions environment named `pypi`.
+- In the existing PyPI project settings, or as a pending publisher before the
+  first upload, add a trusted publisher for owner `tonyjurg`, repository
+  `Perseus-mcp`, workflow `publish.yml`, and environment `pypi`.
+- Do not add a PyPI API token; the workflow uses GitHub OIDC with
+  `id-token: write`.
+
+The workflows reject a tag such as `v0.2.0` when `project.version` is still
+`0.1.0`. PyPI versions are immutable, so increment the version before retrying
+a release that was already uploaded.
 
 ## Contributing and reporting issues
 

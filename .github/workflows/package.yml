@@ -1,0 +1,43 @@
+name: Build Python package
+
+on:
+  push:
+    paths:
+      - pyproject.toml
+      - MANIFEST.in
+      - src/**
+      - server.py
+      - README.md
+      - LICENSE
+      - .github/workflows/package.yml
+  pull_request:
+    paths:
+      - pyproject.toml
+      - MANIFEST.in
+      - src/**
+      - server.py
+      - README.md
+      - LICENSE
+      - .github/workflows/package.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - uses: actions/upload-artifact@v6
+        with:
+          name: python-package
+          path: dist/
