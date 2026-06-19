@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use Perseus MCP in your research, please cite it using the metadata below."
+title: "Perseus MCP"
+type: software
+version: "1.0.0"
+authors:
+  - family-names: "Jurg"
+    given-names: "Tony"
+doi: "10.5281/zenodo.20708961"
+url: "https://doi.org/10.5281/zenodo.20708961"
+repository-code: "https://github.com/tonyjurg/Perseus-mcp"
+license: MIT
+abstract: >-
+  An MCP server providing access to Perseus Greek and Latin texts,
+  CTS resources, passage retrieval, navigation, and textual search.
+keywords:
+  - Perseus
+  - Model Context Protocol
+  - ancient Greek
+  - Latin
+  - classical studies
+  - CTS
