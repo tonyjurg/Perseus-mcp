@@ -247,6 +247,39 @@ def test_remove_readonly_cache_entry_removes_protected_directory(tmp_path) -> No
     assert not protected_file.exists()
 
 
+def test_remove_readonly_cache_entry_restores_parent_first(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    protected_dir = tmp_path / "protected"
+    protected_dir.mkdir()
+    protected_file = protected_dir / "metadata.xml"
+    protected_file.write_text("<xml/>", encoding="utf-8")
+    permission_changes: list[str] = []
+    parent_restored = False
+
+    def guarded_chmod(path, mode) -> None:
+        nonlocal parent_restored
+        normalized_path = os.fspath(path)
+        permission_changes.append(normalized_path)
+        if normalized_path == str(protected_dir):
+            parent_restored = True
+        elif normalized_path == str(protected_file) and not parent_restored:
+            raise PermissionError("parent directory is not traversable")
+
+    monkeypatch.setattr(os, "chmod", guarded_chmod)
+
+    removed: list[str] = []
+    _remove_readonly_cache_entry(
+        removed.append,
+        str(protected_file),
+        (PermissionError, PermissionError("permission denied"), None),
+    )
+
+    assert permission_changes[:2] == [str(protected_dir), str(protected_file)]
+    assert removed == [str(protected_file)]
+
+
 def test_scaife_search_response_can_be_filtered_to_author_scope() -> None:
     authors = _matching_author_entries_from_capabilities(CAPABILITIES_XML, "Homer")
     response_text = json.dumps(

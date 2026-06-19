@@ -237,28 +237,34 @@ def _cache_status() -> str:
 def _remove_readonly_cache_entry(function, path: str, exc_info) -> None:
     """Make a protected cache entry writable and retry its removal.
 
-    ``shutil.rmtree`` may report a protected directory through a traversal
-    operation such as ``os.open`` or ``os.scandir``. Retrying that operation
-    alone does not resume the removal, so remove the now-writable subtree
-    recursively in that case.
+    On Unix, a protected parent directory can prevent even ``chmod`` from
+    reaching the failed entry. Restore access to the parent first, then make
+    the entry writable and retry the failed removal operation.
     """
     error = exc_info[1]
     if not isinstance(error, PermissionError):
         raise error
 
-    writable_mode = stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC
-    os.chmod(path, writable_mode)
+    parent = os.path.dirname(path)
+    if parent and parent != path:
+        parent_mode = stat.S_IMODE(os.stat(parent, follow_symlinks=False).st_mode)
+        os.chmod(
+            parent,
+            parent_mode | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR,
+        )
+
+    path_mode = os.stat(path, follow_symlinks=False).st_mode
+    if stat.S_ISDIR(path_mode):
+        required_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
+    else:
+        required_mode = stat.S_IRUSR | stat.S_IWUSR
+    os.chmod(path, stat.S_IMODE(path_mode) | required_mode)
+
     if function in (os.open, os.scandir):
         shutil.rmtree(path, onerror=_remove_readonly_cache_entry)
         return
 
-    try:
-        function(path)
-    except PermissionError:
-        # Unix requires write and execute permissions on the containing
-        # directory before an entry can be unlinked.
-        os.chmod(os.path.dirname(path), writable_mode)
-        function(path)
+    function(path)
 
 
 def _clear_cache() -> str:
