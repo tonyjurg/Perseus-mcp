@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import stat
 
 import pytest
@@ -228,6 +229,22 @@ def test_remove_readonly_cache_entry_reraises_other_errors(tmp_path) -> None:
             str(tmp_path),
             (OSError, error, None),
         )
+
+
+def test_remove_readonly_cache_entry_removes_protected_directory(tmp_path) -> None:
+    protected_dir = tmp_path / "protected"
+    protected_dir.mkdir()
+    protected_file = protected_dir / "metadata.xml"
+    protected_file.write_text("<xml/>", encoding="utf-8")
+    protected_dir.chmod(stat.S_IREAD)
+
+    _remove_readonly_cache_entry(
+        os.unlink,
+        str(protected_file),
+        (PermissionError, PermissionError("permission denied"), None),
+    )
+
+    assert not protected_file.exists()
 
 
 def test_scaife_search_response_can_be_filtered_to_author_scope() -> None:
