@@ -186,6 +186,8 @@ Run them after installing the project dependencies. The MCP notebooks use
 FastMCP's in-process client transport and call the same tools exposed to
 external MCP clients. The optional OpenRouter notebook also requires an
 OpenRouter API key; the MCP server itself does not.
+Notebook setup cells install notebook-only helpers such as `python-dotenv`
+directly. Those helpers are not core runtime dependencies of `perseus-mcp`.
 
 ### Configure the OpenRouter API key
 

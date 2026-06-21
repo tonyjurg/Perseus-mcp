@@ -43,7 +43,8 @@ The main design goals are:
    indexing job, API key, or background service. A user installs Python
    dependencies and runs the MCP server command from their client. Optional
    client-side LLM adapters, such as the OpenRouter notebook, have their own
-   provider credentials.
+   provider credentials and install notebook-only helpers such as
+   `python-dotenv` in their setup cells.
 4. **Readable extension path**: adding another CTS operation should be a small
    tool wrapper around `_cts_request(...)`, making the implementation easy to
    audit for classicists, students, and developers.
