@@ -175,6 +175,11 @@ only affects where cache files are read and written. Use an absolute
 `PERSEUS_MCP_CACHE_DIR` when multiple local entry points should share one disk
 cache.
 
+Disk cache updates use a process-qualified temporary sibling followed by
+`os.replace(...)`. Keeping the temporary file on the same volume makes the
+final replacement atomic on supported Windows and POSIX filesystems and avoids
+readers observing partial writes.
+
 ### Author resource filtering
 
 `get_author_resources(author)` is a convenience layer over CTS `GetCapabilities`.
