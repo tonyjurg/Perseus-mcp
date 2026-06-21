@@ -130,15 +130,15 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_passage_plus(urn)` → CTS `GetPassagePlus`
 - `get_passage_plaintext(urn)` → CTS `GetPassage`, then local XML text extraction
 - `get_valid_references(urn, level=None)` → CTS `GetValidReff`, optional `level`
-- `get_valid_references_json(urn, level=None, limit=100, offset=0)` → cached CTS `GetValidReff`, then local reference parsing and paging
+- `get_valid_references_json(urn, level=None, limit=100, offset=0)` → cached CTS `GetValidReff`, then local reference parsing and paging with a 1–500 limit
 - `count_valid_references(urn, level=None)` → cached CTS `GetValidReff`, then local reference counting
 - `get_capabilities()` → CTS `GetCapabilities`
 - `get_cache_status()` → local metadata cache status
 - `refresh_metadata_cache()` → refresh cached CTS capabilities
 - `clear_metadata_cache()` → clear memory and disk metadata cache entries
-- `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping
+- `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping with a 1–500 limit
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
-- `find_author_names(query, language=None, limit=100)` → CTS `GetCapabilities`, then local partial matching against textgroup name fields only
+- `find_author_names(query, language=None, limit=100)` → CTS `GetCapabilities`, then local partial matching against textgroup name fields only with a 1–500 limit
 - `get_work_resources(urn_or_title, language=None)` → CTS `GetCapabilities`, then local work/language filtering and JSON shaping
 - `get_label(urn)` → CTS `GetLabel`
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed
@@ -214,6 +214,8 @@ than a verbatim upstream response.
 
 Before Greek searches are sent to Scaife, `search_perseus` normalizes input with `_normalize_greek_query(...)`.
 Unicode Greek is NFC-normalized, while detected or forced Beta Code is transliterated to Unicode Greek, including common breathings, accents, diaeresis, iota subscript, uppercase markers, and final sigma handling.
+Search-language input is restricted to the documented Greek and Latin aliases;
+blank input defaults to Greek and unrecognized values raise `ValueError`.
 `query_format` may be `auto`, `betacode`, or `unicode`; `auto` detects explicit Beta Code marks and short unaccented Beta Code-like queries.
 Operator searches should use `preserve_operators=True`, because characters such
 as `+`, `|`, and `*` also have Beta Code meanings.
