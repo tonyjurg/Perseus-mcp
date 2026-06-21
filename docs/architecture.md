@@ -138,11 +138,11 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `count_valid_references(urn, level=None)` → cached CTS `GetValidReff`, then local reference counting
 - `get_capabilities()` → CTS `GetCapabilities`
 - `get_cache_status()` → local metadata cache status
-- `refresh_metadata_cache()` → refresh cached CTS capabilities
+- `refresh_metadata_cache()` → refresh cached CTS capabilities and Scaife library catalog
 - `clear_metadata_cache()` → clear memory and disk metadata cache entries
 - `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping with a 1–500 limit
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
-- `find_author_names(query, language=None, limit=100)` → CTS `GetCapabilities`, then local partial matching against textgroup name fields only with a 1–500 limit
+- `find_author_names(query, language=None, limit=100)` → cached CTS `GetCapabilities` plus the cached Scaife library catalog, merged by textgroup URN and locally matched against textgroup name fields only with a 1–500 limit
 - `get_work_resources(urn_or_title, language=None)` → CTS `GetCapabilities`, then local work/language filtering and JSON shaping
 - `get_label(urn)` → CTS `GetLabel`
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed
@@ -195,13 +195,14 @@ It fetches the capabilities XML, finds matching `TextGroup` or `textgroup`
 entries by case-insensitive author/group name or textgroup URN fragment, and
 returns JSON instead of raw XML.
 Each matched author entry includes the textgroup URN, names, works, work languages, titles, editions, and translations so clients can discover resource URNs without manually parsing the full capabilities response.
-`find_author_names(query)` uses the same inventory source, but searches only
-the CTS textgroup name fields and returns a narrower response for partial name
-discovery.
+`find_author_names(query)` merges CTS and Scaife textgroups by URN, searches
+only their author/textgroup name fields, and returns a narrower response for
+partial name discovery. The resolver tolerates either inventory being
+unavailable.
 
 When `search_perseus(..., author=...)` is used, the server first performs the
-author resolution against cached CTS capabilities. If the author resolves to
-exactly one CTS textgroup and no explicit `text_group` or `work` is supplied,
+same merged author resolution. If the author resolves to exactly one textgroup
+and no explicit `text_group` or `work` is supplied,
 the textgroup is sent to Scaife as a server-side `text_group` filter. Ambiguous
 author matches still fall back to local post-filtering of the current Scaife
 result page by CTS URN prefixes.

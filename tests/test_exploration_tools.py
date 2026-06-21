@@ -13,6 +13,7 @@ from perseus_mcp.server import (
     _filter_scaife_search_response_by_author,
     _list_text_groups_from_capabilities,
     _matching_author_entries_from_capabilities,
+    _matching_author_entries_from_scaife_catalog,
     _normalize_search_language,
     _passage_plaintext_from_xml,
     _prev_next_xml,
@@ -54,6 +55,29 @@ CAPABILITIES_XML = """<?xml version="1.0" encoding="UTF-8"?>
   </TextInventory>
 </GetCapabilities>
 """
+
+SCAIFE_LIBRARY_JSON = json.dumps(
+    {
+        "text_groups": [
+            {
+                "urn": "urn:cts:greekLit:tlg0018",
+                "label": "Philo Judaeus",
+                "works": [
+                    {
+                        "urn": "urn:cts:greekLit:tlg0018.tlg001",
+                        "texts": [
+                            {
+                                "urn": (
+                                    "urn:cts:greekLit:tlg0018.tlg001.1st1K-grc1"
+                                )
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+)
 
 
 PASSAGE_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -116,6 +140,59 @@ def test_author_name_matches_only_textgroup_names() -> None:
 def test_author_name_matches_rejects_empty_query() -> None:
     with pytest.raises(ValueError, match="query must not be empty"):
         _author_name_matches_from_capabilities(CAPABILITIES_XML, "  ")
+
+
+def test_scaife_author_catalog_matches_philo_and_filters_language() -> None:
+    matches = _matching_author_entries_from_scaife_catalog(
+        SCAIFE_LIBRARY_JSON, "Philo", language="greek", names_only=True
+    )
+    latin_matches = _matching_author_entries_from_scaife_catalog(
+        SCAIFE_LIBRARY_JSON, "Philo", language="latin", names_only=True
+    )
+
+    assert matches[0]["urn"] == "urn:cts:greekLit:tlg0018"
+    assert matches[0]["names"] == ["Philo Judaeus"]
+    assert matches[0]["works_count"] == 1
+    assert latin_matches == []
+
+
+def test_find_author_names_merges_scaife_when_cts_omits_author(monkeypatch) -> None:
+    async def fake_capabilities(refresh=False):
+        return CAPABILITIES_XML
+
+    async def fake_scaife_catalog(refresh=False):
+        return SCAIFE_LIBRARY_JSON
+
+    monkeypatch.setattr(server, "_get_capabilities_cached", fake_capabilities)
+    monkeypatch.setattr(
+        server, "_get_scaife_library_catalog_cached", fake_scaife_catalog
+    )
+
+    result = json.loads(
+        asyncio.run(server.find_author_names("Philo", language="greek", limit=1))
+    )
+
+    assert result["match_count"] == 1
+    assert result["authors"][0]["urn"] == "urn:cts:greekLit:tlg0018"
+    assert result["authors"][0]["matched_names"] == ["Philo Judaeus"]
+
+
+def test_find_author_names_survives_one_inventory_failure(monkeypatch) -> None:
+    async def failing_capabilities(refresh=False):
+        raise RuntimeError("CTS unavailable")
+
+    async def fake_scaife_catalog(refresh=False):
+        return SCAIFE_LIBRARY_JSON
+
+    monkeypatch.setattr(server, "_get_capabilities_cached", failing_capabilities)
+    monkeypatch.setattr(
+        server, "_get_scaife_library_catalog_cached", fake_scaife_catalog
+    )
+
+    result = json.loads(asyncio.run(server.find_author_names("Philo")))
+
+    assert result["match_count"] == 1
+    assert result["authors"][0]["names"] == ["Philo Judaeus"]
 
 
 def test_work_resources_matches_title_and_returns_author_context() -> None:
@@ -328,3 +405,37 @@ def test_search_perseus_uses_server_side_text_group_for_single_author(
 
     assert request["params"]["text_group"] == "urn:cts:greekLit:tlg0012"
     assert result["author_scope"]["note"].startswith("Author scope was sent")
+
+
+def test_search_perseus_resolves_philo_from_scaife_catalog(monkeypatch) -> None:
+    request: dict[str, object] = {}
+
+    async def fake_get(url, params=None, timeout=20.0):
+        request.update(url=url, params=params, timeout=timeout)
+        return '{"results": [], "total_count": 0}'
+
+    async def fake_capabilities(refresh=False):
+        return CAPABILITIES_XML
+
+    async def fake_scaife_catalog(refresh=False):
+        return SCAIFE_LIBRARY_JSON
+
+    monkeypatch.setattr(server, "_get", fake_get)
+    monkeypatch.setattr(server, "_get_capabilities_cached", fake_capabilities)
+    monkeypatch.setattr(
+        server, "_get_scaife_library_catalog_cached", fake_scaife_catalog
+    )
+
+    result = json.loads(
+        asyncio.run(
+            server.search_perseus(
+                "politei/a",
+                language="greek",
+                query_format="betacode",
+                author="Philo Judaeus",
+            )
+        )
+    )
+
+    assert request["params"]["text_group"] == "urn:cts:greekLit:tlg0018"
+    assert result["author_scope"]["match_count"] == 1

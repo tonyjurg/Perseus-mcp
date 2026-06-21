@@ -303,7 +303,7 @@ The discovery helpers are useful when you do not yet know the exact CTS URN to f
 
 - `list_text_groups(language=None, query=None, limit=100)` lists author/textgroup matches and their works. Use a `limit` from 1 through 500, `language="greek"` or `language="latin"` to focus the inventory, and `query` to match author names, textgroup URNs, or work titles.
 - `get_author_resources(author, language=None)` returns detailed JSON for a matching author or textgroup, including work URNs, titles, languages, editions, translations, and other resource URNs.
-- `find_author_names(query, language=None, limit=100)` accepts a `limit` from 1 through 500 and matches only CTS author/textgroup name fields, so partial queries such as `"Hom"` return author names without also matching work titles.
+- `find_author_names(query, language=None, limit=100)` accepts a `limit` from 1 through 500, merges the Perseus CTS and Scaife library inventories, and then matches only author/textgroup name fields. Partial queries such as `"Hom"` return author names without also matching work titles, while Scaife-only entries such as Philo Judaeus remain discoverable.
 - `get_work_resources(urn_or_title, language=None)` narrows directly to a work title or work URN, returns its editions/translations/resources with author context, and can restrict matches to an original work language such as `"greek"` or `"latin"`.
 - `get_passage_plaintext(urn)` fetches a passage through CTS and extracts readable text from the returned XML.
 
