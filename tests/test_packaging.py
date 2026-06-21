@@ -49,6 +49,22 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
     )
 
 
+def test_core_dependencies_are_actually_used_by_the_package() -> None:
+    configuration = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    dependency_names = {
+        dependency.split(">=")[0].split("==")[0].strip()
+        for dependency in configuration["project"]["dependencies"]
+    }
+
+    # Everything the package imports at runtime must be declared...
+    assert {"fastmcp", "httpx"} <= dependency_names
+    # ...and python-dotenv must not reappear as a core dependency: it is not
+    # imported anywhere under src/perseus_mcp, only used by example
+    # notebooks, which already install it themselves via their own
+    # `%pip install` cell.
+    assert "python-dotenv" not in dependency_names
+
+
 def test_main_runs_registered_mcp_server(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(package_server.mcp, "run", lambda: calls.append("run"))
