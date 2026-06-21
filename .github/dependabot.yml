@@ -9,6 +9,8 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+      - "python"
+      
 
   # Action versions used by workflows under .github/workflows/.
   - package-ecosystem: "github-actions"
@@ -18,3 +20,4 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+      - "github_actions"
