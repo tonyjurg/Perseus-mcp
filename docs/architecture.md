@@ -210,6 +210,11 @@ edition URN by removing the passage component after the final colon.
 This fallback preserves the tool contract but is locally shaped output rather
 than a verbatim upstream response.
 
+All XML received from Perseus or Scaife is parsed with `defusedxml`, which
+rejects DTD and custom-entity constructs before local traversal. The standard
+library `ElementTree` API remains in use only for constructing trusted fallback
+XML locally.
+
 ### Greek query normalization
 
 Before Greek searches are sent to Scaife, `search_perseus` normalizes input with `_normalize_greek_query(...)`.
@@ -244,6 +249,8 @@ PY
 Errors are not swallowed:
 
 - HTTP errors from upstream propagate as exceptions.
+- Unsafe DTD or entity declarations in upstream XML are rejected rather than
+  expanded.
 - A Perseus `429 Too Many Requests` response therefore reaches the client as an
   `httpx.HTTPStatusError`. The current HTTP helper does not implement automatic
   retry, exponential backoff, or `Retry-After` handling. Callers running passage
