@@ -161,10 +161,27 @@ def _disk_cache_get(path: Path) -> str | None:
 
 
 def _disk_cache_set(path: Path, value: str) -> None:
+    """Write a cache entry atomically.
+
+    PERSEUS_MCP_CACHE_DIR is documented as safe to share across multiple
+    local processes (an MCP server plus one or more notebook kernels). A
+    plain ``path.write_text(...)`` is not atomic, so two processes writing
+    the same cache key around the same time could interleave and leave a
+    corrupted file that fails to parse on the next read. Writing to a
+    process-unique temporary file in the same directory and then using
+    ``os.replace`` (atomic on POSIX and Windows when source/destination are
+    on the same volume) avoids that.
+    """
     if not _cache_enabled():
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(value, encoding="utf-8")
+    tmp_path = path.with_name(f"{path.name}.tmp-{os.getpid()}-{time.monotonic_ns()}")
+    try:
+        tmp_path.write_text(value, encoding="utf-8")
+        os.replace(tmp_path, path)
+    except OSError:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 
 async def _cached_text(
