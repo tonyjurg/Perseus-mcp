@@ -20,11 +20,11 @@ helpers return locally shaped JSON or readable text.
 - `count_valid_references(urn, level=None)` — count valid references without returning the full list.
 - `get_capabilities()` — list available texts/editions from Perseus CTS.
 - `get_cache_status()` — inspect local metadata cache state.
-- `refresh_metadata_cache()` — refresh cached CTS capabilities.
+- `refresh_metadata_cache()` — refresh cached CTS and Scaife library metadata.
 - `clear_metadata_cache()` — clear in-memory and disk metadata cache entries.
 - `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works (`limit`: 1–500).
 - `get_author_resources(author, language=None)` — list works, editions, and translations for a matching author name or CTS textgroup URN.
-- `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match (`limit`: 1–500).
+- `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match across the CTS and Scaife inventories (`limit`: 1–500).
 - `get_work_resources(urn_or_title, language=None)` — list editions, translations, and resources for a work, optionally filtered by original language.
 - `get_label(urn)` — fetch human-readable metadata labels for a URN.
 - `get_first_urn(urn)` — get the first navigable URN under a work/edition.
@@ -48,10 +48,12 @@ The `language` argument accepts recognized Greek aliases (`greek`, `grc`, `gr`)
 or Latin aliases (`latin`, `lat`, `la`); blank input defaults to Greek and
 unrecognized values raise an error. It controls query normalization and is not
 currently sent to Scaife as a corpus language filter.
-For CTS inventory discovery, `list_text_groups`, `find_author_names`,
+For inventory discovery, `list_text_groups`, `find_author_names`,
 `get_author_resources`, and `get_work_resources` accept `language="greek"` or
 `language="latin"` (and common codes such as `grc` or `lat`) as an actual work
-language filter. Passage and navigation tools use CTS URNs, whose
+language filter. `find_author_names` merges the legacy CTS inventory with the
+Scaife library catalog, so Scaife-only authors such as Philo Judaeus remain
+discoverable. Passage and navigation tools use CTS URNs, whose
 `greekLit`/`latinLit` namespace and edition identifier already select the text.
 Pass `author` to resolve a CTS author/textgroup name or URN. When it resolves
 to exactly one textgroup, Scaife receives a server-side `text_group` filter;

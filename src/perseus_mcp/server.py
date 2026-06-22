@@ -22,6 +22,7 @@ mcp = FastMCP("perseus")
 CTS_BASE = "https://www.perseus.tufts.edu/hopper/CTS"
 SCAIFE_SEARCH = "https://scaife.perseus.org/search/json/"
 SCAIFE_LIBRARY = "https://scaife.perseus.org/library/"
+SCAIFE_LIBRARY_CATALOG = f"{SCAIFE_LIBRARY.rstrip('/')}/json/"
 DEFAULT_CACHE_TTL_SECONDS = 24 * 60 * 60
 _XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 _COMMON_LANGUAGE_CODES = {
@@ -261,6 +262,16 @@ async def _get_capabilities_cached(refresh: bool = False) -> str:
         "capabilities",
         {"request": "GetCapabilities", "base": CTS_BASE},
         lambda: _cts_request("GetCapabilities"),
+        refresh=refresh,
+    )
+
+
+async def _get_scaife_library_catalog_cached(refresh: bool = False) -> str:
+    return await _cached_text(
+        "scaife_library",
+        {"url": SCAIFE_LIBRARY_CATALOG},
+        lambda: _get(SCAIFE_LIBRARY_CATALOG),
+        extension="json",
         refresh=refresh,
     )
 
@@ -582,10 +593,164 @@ def _text_matches_query(values: list[str | None], query: str | None) -> bool:
     return normalized_query in " ".join(value or "" for value in values).casefold()
 
 
-def _query_match_rank(values: list[str | None], query: str) -> int:
+def _query_match_rank(values: list[str | None], query: str) -> tuple[int, int]:
     normalized_query = _normalize_space(query).casefold()
     normalized_values = [_normalize_space(value).casefold() for value in values]
-    return 0 if normalized_query in normalized_values else 1
+
+    def value_rank(value: str) -> tuple[int, int]:
+        if value == normalized_query:
+            return (0, len(value))
+        if re.match(rf"^{re.escape(normalized_query)}(?:$|\W)", value):
+            return (1, len(value))
+        if value.startswith(normalized_query):
+            return (2, len(value))
+        return (3, len(value))
+
+    matches = [value_rank(value) for value in normalized_values if normalized_query in value]
+    return min(matches, default=(4, 0))
+
+
+def _language_from_cts_urn(urn: str | None) -> str | None:
+    if not urn:
+        return None
+    namespace = urn.split(":", 3)[2].casefold() if urn.count(":") >= 3 else ""
+    if namespace == "greeklit":
+        return "grc"
+    if namespace == "latinlit":
+        return "lat"
+    return None
+
+
+def _scaife_work_entry(work: dict[str, Any]) -> dict[str, Any]:
+    urn = work.get("urn")
+    return {
+        "urn": urn,
+        "language": _language_from_cts_urn(urn),
+        "titles": [],
+        "editions": [],
+        "translations": [],
+        "resources": [],
+    }
+
+
+def _matching_author_entries_from_scaife_catalog(
+    catalog_json: str,
+    author: str,
+    language: str | None = None,
+    *,
+    names_only: bool = False,
+) -> list[dict[str, Any]]:
+    query = _normalize_space(author)
+    if not query:
+        raise ValueError("author must not be empty")
+
+    data = json.loads(catalog_json)
+    text_groups = data.get("text_groups", []) if isinstance(data, dict) else []
+    normalized_language = _normalize_cts_language(language)
+    authors: list[dict[str, Any]] = []
+
+    for text_group in text_groups:
+        if not isinstance(text_group, dict):
+            continue
+        label = _normalize_space(text_group.get("label"))
+        names = [label] if label else []
+        searchable: list[str | None] = names
+        if not names_only:
+            searchable = [text_group.get("urn"), *names]
+        if not _text_matches_query(searchable, query):
+            continue
+
+        works = [
+            _scaife_work_entry(work)
+            for work in text_group.get("works", [])
+            if isinstance(work, dict)
+        ]
+        if normalized_language is not None:
+            works = [
+                work for work in works if work.get("language") == normalized_language
+            ]
+            if not works:
+                continue
+
+        authors.append(
+            {
+                "urn": text_group.get("urn"),
+                "names": names,
+                "works_count": len(works),
+                "works": works,
+            }
+        )
+
+    authors.sort(
+        key=lambda entry: _query_match_rank(
+            [entry.get("urn"), *entry.get("names", [])], query
+        )
+    )
+    return authors
+
+
+def _merge_author_entries(
+    *author_groups: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    merged: dict[str, dict[str, Any]] = {}
+
+    for authors in author_groups:
+        for author in authors:
+            urn = author.get("urn")
+            key = urn or "|".join(author.get("names", [])).casefold()
+            if key not in merged:
+                merged[key] = author
+                continue
+
+            existing = merged[key]
+            existing_names = existing.setdefault("names", [])
+            for name in author.get("names", []):
+                if name not in existing_names:
+                    existing_names.append(name)
+
+            existing_works = existing.setdefault("works", [])
+            existing_work_urns = {
+                work.get("urn") for work in existing_works if work.get("urn")
+            }
+            for work in author.get("works", []):
+                if work.get("urn") not in existing_work_urns:
+                    existing_works.append(work)
+            existing["works_count"] = len(existing_works)
+
+    return list(merged.values())
+
+
+async def _resolve_author_entries(
+    author: str,
+    language: str | None = None,
+    *,
+    names_only: bool = False,
+) -> list[dict[str, Any]]:
+    async def from_cts() -> list[dict[str, Any]]:
+        capabilities_xml = await _get_capabilities_cached()
+        return _matching_author_entries_from_capabilities(
+            capabilities_xml, author, language, names_only=names_only
+        )
+
+    async def from_scaife() -> list[dict[str, Any]]:
+        catalog_json = await _get_scaife_library_catalog_cached()
+        return _matching_author_entries_from_scaife_catalog(
+            catalog_json, author, language, names_only=names_only
+        )
+
+    results = await asyncio.gather(from_cts(), from_scaife(), return_exceptions=True)
+    successful = [result for result in results if isinstance(result, list)]
+    if not successful:
+        raise results[0]
+
+    authors = _merge_author_entries(*successful)
+    query = _normalize_space(author)
+    authors.sort(
+        key=lambda entry: _query_match_rank(
+            [entry.get("urn"), *entry.get("names", [])], query
+        )
+    )
+    return authors
 
 
 def _matching_author_entries_from_capabilities(
@@ -704,11 +869,21 @@ def _author_name_matches_from_capabilities(
 ) -> str:
     if not _normalize_space(query):
         raise ValueError("query must not be empty")
-    limit = _bounded_list_limit(limit)
 
     authors = _matching_author_entries_from_capabilities(
         capabilities_xml, query, language, names_only=True
-    )[:limit]
+    )
+    return _author_name_matches_response(authors, query, language, limit)
+
+
+def _author_name_matches_response(
+    authors: list[dict[str, Any]],
+    query: str,
+    language: str | None = None,
+    limit: int = 100,
+) -> str:
+    limit = _bounded_list_limit(limit)
+    authors = authors[:limit]
     normalized_query = _normalize_space(query).casefold()
 
     return json.dumps(
@@ -1121,13 +1296,17 @@ async def get_cache_status() -> str:
 
 @mcp.tool
 async def refresh_metadata_cache() -> str:
-    """Refresh cached CTS capabilities metadata from Perseus."""
-    capabilities_xml = await _get_capabilities_cached(refresh=True)
+    """Refresh cached CTS and Scaife library metadata."""
+    capabilities_xml, scaife_catalog_json = await asyncio.gather(
+        _get_capabilities_cached(refresh=True),
+        _get_scaife_library_catalog_cached(refresh=True),
+    )
     return json.dumps(
         {
             "refreshed": True,
             "cache": json.loads(_cache_status()),
             "capabilities_bytes": len(capabilities_xml.encode("utf-8")),
+            "scaife_catalog_bytes": len(scaife_catalog_json.encode("utf-8")),
         },
         ensure_ascii=False,
         indent=2,
@@ -1171,18 +1350,20 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
 async def find_author_names(
     query: str, language: str | None = None, limit: int = 100
 ) -> str:
-    """Find author/textgroup names by partial name match.
+    """Find author/textgroup names by partial name match across Perseus catalogs.
 
-    This matches only exact CTS author/textgroup name fields, not work titles.
+    This merges the legacy CTS capabilities inventory with Scaife's library
+    catalog, then matches author/textgroup name fields only, not work titles.
+    A result can therefore be found when either upstream inventory contains it.
     `limit` must be between 1 and 500.
     Examples:
     - query: "Hom"
     - query: "Plut"
     """
-    capabilities_xml = await _get_capabilities_cached()
-    return _author_name_matches_from_capabilities(
-        capabilities_xml, query, language, limit
-    )
+    if not _normalize_space(query):
+        raise ValueError("query must not be empty")
+    authors = await _resolve_author_entries(query, language, names_only=True)
+    return _author_name_matches_response(authors, query, language, limit)
 
 
 @mcp.tool
@@ -1276,10 +1457,7 @@ async def search_perseus(
     authors: list[dict[str, Any]] = []
     resolved_author_text_group: str | None = None
     if author is not None and _normalize_space(author):
-        capabilities_xml = await _get_capabilities_cached()
-        authors = _matching_author_entries_from_capabilities(
-            capabilities_xml, author, language
-        )
+        authors = await _resolve_author_entries(author, language)
         resolved_author_text_group = _single_author_text_group_urn(authors)
 
     effective_text_group = _normalize_space(text_group) or None
