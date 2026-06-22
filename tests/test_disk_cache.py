@@ -77,3 +77,27 @@ def test_disk_cache_set_temp_filename_includes_pid_for_concurrent_writers(
 
     assert len(seen_names) == 1
     assert seen_names[0] == f"abc123.xml.tmp-{os.getpid()}-{seen_names[0].rsplit('-', 1)[-1]}"
+
+
+def test_disk_cache_get_treats_concurrent_removal_as_cache_miss(monkeypatch) -> None:
+    monkeypatch.delenv("PERSEUS_MCP_DISABLE_CACHE", raising=False)
+
+    class VanishingCachePath:
+        def exists(self):
+            return True
+
+        def stat(self):
+            raise FileNotFoundError("removed concurrently")
+
+    assert _disk_cache_get(VanishingCachePath()) is None
+
+
+def test_disk_cache_get_treats_invalid_text_as_cache_miss(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.delenv("PERSEUS_MCP_DISABLE_CACHE", raising=False)
+    path = tmp_path / "capabilities" / "abc123.xml"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"\xff")
+
+    assert _disk_cache_get(path) is None
