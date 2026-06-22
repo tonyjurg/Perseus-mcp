@@ -1,6 +1,6 @@
 [project]
 name = "perseus-mcp"
-version = "1.0.0"
+version = "1.0.1"
 description = "MCP server for Perseus Greek and Latin text research"
 readme = "README.md"
 requires-python = ">=3.11"
