@@ -16,15 +16,15 @@ helpers return locally shaped JSON or readable text.
 - `get_passage_plus(urn)` — fetch passage text plus contextual metadata.
 - `get_passage_plaintext(urn)` — fetch a CTS passage as plain readable text.
 - `get_valid_references(urn, level=None)` — retrieve navigable citation references for a work or edition.
-- `get_valid_references_json(urn, level=None, limit=100, offset=0)` — retrieve paged citation references as JSON.
+- `get_valid_references_json(urn, level=None, limit=100, offset=0)` — retrieve paged citation references as JSON (`limit`: 1–500).
 - `count_valid_references(urn, level=None)` — count valid references without returning the full list.
 - `get_capabilities()` — list available texts/editions from Perseus CTS.
 - `get_cache_status()` — inspect local metadata cache state.
 - `refresh_metadata_cache()` — refresh cached CTS capabilities.
 - `clear_metadata_cache()` — clear in-memory and disk metadata cache entries.
-- `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works.
+- `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works (`limit`: 1–500).
 - `get_author_resources(author, language=None)` — list works, editions, and translations for a matching author name or CTS textgroup URN.
-- `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match.
+- `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match (`limit`: 1–500).
 - `get_work_resources(urn_or_title, language=None)` — list editions, translations, and resources for a work, optionally filtered by original language.
 - `get_label(urn)` — fetch human-readable metadata labels for a URN.
 - `get_first_urn(urn)` — get the first navigable URN under a work/edition.
@@ -44,8 +44,10 @@ The default `query_format="auto"` detects explicit Beta Code marks like `=`, `/`
 If an ASCII query is ambiguous, set `query_format="betacode"` to force conversion or `query_format="unicode"` to preserve it exactly.
 Search queries are normalized to composed Greek Unicode (NFC), matching sampled Perseus Greek text.
 The tool uses Scaife's JSON search route and returns the JSON response as text.
-The `language` argument controls Greek query normalization; it is not currently
-sent to Scaife as a corpus language filter.
+The `language` argument accepts recognized Greek aliases (`greek`, `grc`, `gr`)
+or Latin aliases (`latin`, `lat`, `la`); blank input defaults to Greek and
+unrecognized values raise an error. It controls query normalization and is not
+currently sent to Scaife as a corpus language filter.
 For CTS inventory discovery, `list_text_groups`, `find_author_names`,
 `get_author_resources`, and `get_work_resources` accept `language="greek"` or
 `language="latin"` (and common codes such as `grc` or `lat`) as an actual work

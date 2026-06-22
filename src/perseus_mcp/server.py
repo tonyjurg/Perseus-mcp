@@ -387,12 +387,27 @@ def _normalize_cts_language(language: str | None) -> str | None:
 
 
 def _normalize_search_language(language: str | None) -> str:
-    cts_language = _normalize_cts_language(language)
+    """Normalize a user-facing search language to Scaife's two-letter code.
+
+    Accepts "greek"/"grc"/"gr" and case-insensitive variants for Greek, and
+    "latin"/"lat"/"la" for Latin (see _COMMON_LANGUAGE_CODES). A missing or
+    blank value defaults to Greek. Any other value raises ValueError instead
+    of being silently truncated to its first two characters, which
+    previously produced a nonsensical Scaife language code with no
+    indication that the input was not recognized.
+    """
+    normalized_input = _normalize_space(language)
+    if not normalized_input:
+        return "gr"
+    cts_language = _normalize_cts_language(normalized_input)
     if cts_language == "grc":
         return "gr"
     if cts_language == "lat":
         return "la"
-    return (language or "gr")[:2]
+    raise ValueError(
+        "language must be a recognized Greek or Latin value, such as "
+        f"'greek', 'grc', 'gr', 'latin', 'lat', or 'la' (got {language!r})"
+    )
 
 
 def _normalize_language(language: str | None) -> str:
@@ -417,6 +432,24 @@ def _normalize_search_result_format(result_format: str | None) -> str:
 def _positive_int(value: int, name: str) -> int:
     if value < 1:
         raise ValueError(f"{name} must be at least 1")
+    return value
+
+
+_MAX_LIST_LIMIT = 500
+
+
+def _bounded_list_limit(value: int, name: str = "limit") -> int:
+    """Validate a result-page ``limit`` and cap it at _MAX_LIST_LIMIT.
+
+    These limits bound how many entries a single tool call can return.
+    Without an upper bound, a caller (or an LLM guessing at arguments) could
+    request an arbitrarily large limit and get back a payload sized for
+    nothing in particular, which is wasteful for the upstream fetch and
+    expensive to push into a model's context window.
+    """
+    value = _positive_int(value, name)
+    if value > _MAX_LIST_LIMIT:
+        raise ValueError(f"{name} must not exceed {_MAX_LIST_LIMIT}")
     return value
 
 
@@ -599,6 +632,7 @@ def _list_text_groups_from_capabilities(
     query: str | None = None,
     limit: int = 100,
 ) -> str:
+    limit = _bounded_list_limit(limit)
     root = _capabilities_root(capabilities_xml)
     text_groups: list[dict[str, Any]] = []
 
@@ -670,6 +704,7 @@ def _author_name_matches_from_capabilities(
 ) -> str:
     if not _normalize_space(query):
         raise ValueError("query must not be empty")
+    limit = _bounded_list_limit(limit)
 
     authors = _matching_author_entries_from_capabilities(
         capabilities_xml, query, language, names_only=True
@@ -794,7 +829,7 @@ def _valid_references_json(
     limit: int = 100,
     offset: int = 0,
 ) -> str:
-    limit = _positive_int(limit, "limit")
+    limit = _bounded_list_limit(limit)
     offset = _non_negative_int(offset, "offset")
     references = _reference_urns_from_xml(references_xml)
     page = references[offset : offset + limit]
@@ -1052,7 +1087,10 @@ async def get_valid_references(urn: str, level: int | None = None) -> str:
 async def get_valid_references_json(
     urn: str, level: int | None = None, limit: int = 100, offset: int = 0
 ) -> str:
-    """Get valid citation references as paged JSON instead of raw CTS XML."""
+    """Get valid citation references as paged JSON instead of raw CTS XML.
+
+    `limit` must be between 1 and 500.
+    """
     references_xml = await _get_valid_references_cached(urn, level)
     return _valid_references_json(references_xml, urn, level, limit, offset)
 
@@ -1109,7 +1147,8 @@ async def list_text_groups(
     """List authors/textgroups and their works from CTS capabilities.
 
     Optional `language` accepts values such as "greek", "grc", "latin", or
-    "lat". Optional `query` matches author names, textgroup URNs, or work titles.
+    "lat". Optional `query` matches author names, textgroup URNs, or work
+    titles. `limit` must be between 1 and 500.
     """
     capabilities_xml = await _get_capabilities_cached()
     return _list_text_groups_from_capabilities(capabilities_xml, language, query, limit)
@@ -1135,6 +1174,7 @@ async def find_author_names(
     """Find author/textgroup names by partial name match.
 
     This matches only exact CTS author/textgroup name fields, not work titles.
+    `limit` must be between 1 and 500.
     Examples:
     - query: "Hom"
     - query: "Plut"

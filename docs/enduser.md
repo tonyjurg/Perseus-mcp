@@ -26,15 +26,15 @@ The current implementation exposes twenty-three text-returning tools:
 - `get_passage_plus(urn)`
 - `get_passage_plaintext(urn)`
 - `get_valid_references(urn, level=None)`
-- `get_valid_references_json(urn, level=None, limit=100, offset=0)`
+- `get_valid_references_json(urn, level=None, limit=100, offset=0)` (`limit`: 1–500)
 - `count_valid_references(urn, level=None)`
 - `get_capabilities()`
 - `get_cache_status()`
 - `refresh_metadata_cache()`
 - `clear_metadata_cache()`
-- `list_text_groups(language=None, query=None, limit=100)`
+- `list_text_groups(language=None, query=None, limit=100)` (`limit`: 1–500)
 - `get_author_resources(author, language=None)`
-- `find_author_names(query, language=None, limit=100)`
+- `find_author_names(query, language=None, limit=100)` (`limit`: 1–500)
 - `get_work_resources(urn_or_title, language=None)`
 - `get_label(urn)`
 - `get_first_urn(urn)`
@@ -301,9 +301,9 @@ values are the important part.
 
 The discovery helpers are useful when you do not yet know the exact CTS URN to fetch:
 
-- `list_text_groups(language=None, query=None, limit=100)` lists author/textgroup matches and their works. Use `language="greek"` or `language="latin"` to focus the inventory, and `query` to match author names, textgroup URNs, or work titles.
+- `list_text_groups(language=None, query=None, limit=100)` lists author/textgroup matches and their works. Use a `limit` from 1 through 500, `language="greek"` or `language="latin"` to focus the inventory, and `query` to match author names, textgroup URNs, or work titles.
 - `get_author_resources(author, language=None)` returns detailed JSON for a matching author or textgroup, including work URNs, titles, languages, editions, translations, and other resource URNs.
-- `find_author_names(query, language=None, limit=100)` matches only CTS author/textgroup name fields, so partial queries such as `"Hom"` return author names without also matching work titles.
+- `find_author_names(query, language=None, limit=100)` accepts a `limit` from 1 through 500 and matches only CTS author/textgroup name fields, so partial queries such as `"Hom"` return author names without also matching work titles.
 - `get_work_resources(urn_or_title, language=None)` narrows directly to a work title or work URN, returns its editions/translations/resources with author context, and can restrict matches to an original work language such as `"greek"` or `"latin"`.
 - `get_passage_plaintext(urn)` fetches a passage through CTS and extracts readable text from the returned XML.
 
@@ -358,6 +358,6 @@ operations, the server derives a well-formed XML result from
 - **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` works manually.
 - **Client connects but the model does not call tools**: explicitly ask the model to use the `perseus` MCP tools, or use the client's tool picker/approval UI if it has one.
 - **Wrong model/provider**: model choice is controlled by your LLM client, not by this server. Keep this MCP server config the same and choose the desired model in the client.
-- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument uses a server-side Scaife `text_group` filter when it resolves to one textgroup, and otherwise falls back to local filtering over the current result page.
+- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument accepts Greek aliases (`greek`, `grc`, `gr`) or Latin aliases (`latin`, `lat`, `la`); blank input defaults to Greek and other values raise an error. It controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument uses a server-side Scaife `text_group` filter when it resolves to one textgroup, and otherwise falls back to local filtering over the current result page.
 - **Unexpected edition URN**: Scaife search and Perseus CTS do not always expose the same edition identifiers. Use the discovery tools before calling CTS passage or navigation tools.
 
