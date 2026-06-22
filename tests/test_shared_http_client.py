@@ -72,6 +72,47 @@ def test_aclose_http_client_closes_and_resets_client() -> None:
     assert server._HTTP_CLIENT is None
 
 
+def test_aclose_http_client_recovers_when_original_loop_is_closed(monkeypatch) -> None:
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.is_closed = False
+
+        async def aclose(self):
+            self.is_closed = True
+            raise RuntimeError("Event loop is closed")
+
+    monkeypatch.setattr(server.httpx, "AsyncClient", FakeClient)
+
+    async def create_client():
+        return await server._shared_client()
+
+    client = asyncio.run(create_client())
+    asyncio.run(server.aclose_http_client())
+
+    assert client.is_closed is True
+    assert server._HTTP_CLIENT is None
+    assert server._HTTP_CLIENT_LOOP is None
+
+
+def test_aclose_http_client_resets_state_after_unrelated_close_error() -> None:
+    class FailingClient:
+        is_closed = False
+
+        async def aclose(self):
+            raise RuntimeError("unexpected transport failure")
+
+    async def scenario():
+        server._HTTP_CLIENT = FailingClient()
+        server._HTTP_CLIENT_LOOP = asyncio.get_running_loop()
+        with pytest.raises(RuntimeError, match="unexpected transport failure"):
+            await server.aclose_http_client()
+
+    asyncio.run(scenario())
+
+    assert server._HTTP_CLIENT is None
+    assert server._HTTP_CLIENT_LOOP is None
+
+
 def test_get_reuses_shared_client_across_calls(monkeypatch) -> None:
     seen_client_ids: list[int] = []
 

@@ -93,6 +93,24 @@ _HTTP_CLIENT: httpx.AsyncClient | None = None
 _HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
 
 
+async def _close_http_client(
+    client: httpx.AsyncClient,
+    client_loop: asyncio.AbstractEventLoop | None,
+) -> None:
+    """Close a client without failing when its owning loop has already ended."""
+    if client.is_closed:
+        return
+    try:
+        await client.aclose()
+    except RuntimeError as exc:
+        if (
+            str(exc) != "Event loop is closed"
+            or client_loop is None
+            or not client_loop.is_closed()
+        ):
+            raise
+
+
 async def _shared_client() -> httpx.AsyncClient:
     """Return a process-wide httpx.AsyncClient, reused across tool calls.
 
@@ -116,11 +134,7 @@ async def _shared_client() -> httpx.AsyncClient:
         or _HTTP_CLIENT_LOOP is not running_loop
     ):
         if _HTTP_CLIENT is not None and not _HTTP_CLIENT.is_closed:
-            try:
-                await _HTTP_CLIENT.aclose()
-            except RuntimeError as exc:
-                if str(exc) != "Event loop is closed":
-                    raise
+            await _close_http_client(_HTTP_CLIENT, _HTTP_CLIENT_LOOP)
         _HTTP_CLIENT = httpx.AsyncClient(follow_redirects=True)
         _HTTP_CLIENT_LOOP = running_loop
     return _HTTP_CLIENT
@@ -134,10 +148,14 @@ async def aclose_http_client() -> None:
     that wants a clean shutdown.
     """
     global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
-    if _HTTP_CLIENT is not None and not _HTTP_CLIENT.is_closed:
-        await _HTTP_CLIENT.aclose()
-    _HTTP_CLIENT = None
-    _HTTP_CLIENT_LOOP = None
+    client = _HTTP_CLIENT
+    client_loop = _HTTP_CLIENT_LOOP
+    try:
+        if client is not None:
+            await _close_http_client(client, client_loop)
+    finally:
+        _HTTP_CLIENT = None
+        _HTTP_CLIENT_LOOP = None
 
 
 async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
