@@ -2,6 +2,9 @@ name: Build Python package
 
 on:
   push:
+    branches:
+      - main
+      - development
     paths:
       - pyproject.toml
       - MANIFEST.in
