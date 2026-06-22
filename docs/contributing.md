@@ -55,12 +55,14 @@ test suite:
 ```bash
 pip install -e ".[dev]"
 pytest
+ruff check src tests
 ```
 
 With `uv`:
 
 ```bash
 uv run --extra dev pytest
+uv run --extra dev ruff check src tests
 ```
 
 ## Build Release Artifacts
