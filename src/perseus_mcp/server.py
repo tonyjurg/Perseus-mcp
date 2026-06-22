@@ -93,7 +93,7 @@ _HTTP_CLIENT: httpx.AsyncClient | None = None
 _HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
 
 
-def _shared_client() -> httpx.AsyncClient:
+async def _shared_client() -> httpx.AsyncClient:
     """Return a process-wide httpx.AsyncClient, reused across tool calls.
 
     Opening a brand new client (and therefore a new TCP/TLS connection) for
@@ -115,6 +115,12 @@ def _shared_client() -> httpx.AsyncClient:
         or _HTTP_CLIENT.is_closed
         or _HTTP_CLIENT_LOOP is not running_loop
     ):
+        if _HTTP_CLIENT is not None and not _HTTP_CLIENT.is_closed:
+            try:
+                await _HTTP_CLIENT.aclose()
+            except RuntimeError as exc:
+                if str(exc) != "Event loop is closed":
+                    raise
         _HTTP_CLIENT = httpx.AsyncClient(follow_redirects=True)
         _HTTP_CLIENT_LOOP = running_loop
     return _HTTP_CLIENT
@@ -135,7 +141,7 @@ async def aclose_http_client() -> None:
 
 
 async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
-    client = _shared_client()
+    client = await _shared_client()
     response = await client.get(url, params=params, timeout=timeout)
     response.raise_for_status()
     return response.text
