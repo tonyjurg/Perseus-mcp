@@ -15,6 +15,8 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
+from defusedxml.common import DefusedXmlException
+from defusedxml.ElementTree import fromstring as _safe_xml_fromstring
 from fastmcp import FastMCP
 
 mcp = FastMCP("perseus")
@@ -578,7 +580,7 @@ def _text_group_entry(text_group: ET.Element, include_works: bool = True) -> dic
 
 
 def _capabilities_root(capabilities_xml: str) -> ET.Element:
-    return ET.fromstring(capabilities_xml)
+    return _safe_xml_fromstring(capabilities_xml)
 
 
 def _work_matches_language(work: dict[str, Any], language: str | None) -> bool:
@@ -956,7 +958,7 @@ def _work_resources_from_capabilities(
 
 
 def _passage_plaintext_from_xml(passage_xml: str) -> str:
-    root = ET.fromstring(passage_xml)
+    root = _safe_xml_fromstring(passage_xml)
     text_parts: list[str] = []
     preferred_text_nodes = {"l", "p", "ab", "seg", "quote"}
 
@@ -982,14 +984,14 @@ def _passage_plaintext_from_xml(passage_xml: str) -> str:
 
 def _is_xml_response(response_text: str, expected_root: str) -> bool:
     try:
-        root = ET.fromstring(response_text)
-    except ET.ParseError:
+        root = _safe_xml_fromstring(response_text)
+    except (ET.ParseError, DefusedXmlException):
         return False
     return _local_name(root.tag).casefold() == expected_root.casefold()
 
 
 def _reference_urns_from_xml(references_xml: str) -> list[str]:
-    root = ET.fromstring(references_xml)
+    root = _safe_xml_fromstring(references_xml)
     return [
         _element_text(element)
         for element in root.iter()
