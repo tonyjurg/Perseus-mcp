@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -85,13 +86,56 @@ _BETACODE_MARKERS = frozenset("*()/\\=|+")
 _BETACODE_WORD_RE = re.compile(r"[A-Za-z*()/\\=|+]+")
 _CTS_URN_RE = re.compile(r"urn:cts:[^\s\"'<>]+")
 _MEMORY_CACHE: dict[str, tuple[float, str]] = {}
+_HTTP_CLIENT: httpx.AsyncClient | None = None
+_HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
+
+
+def _shared_client() -> httpx.AsyncClient:
+    """Return a process-wide httpx.AsyncClient, reused across tool calls.
+
+    Opening a brand new client (and therefore a new TCP/TLS connection) for
+    every tool call is wasteful for a long-lived MCP server, especially for
+    passage-processing workflows that make many sequential requests to the
+    same Perseus/Scaife hosts. Reusing one client lets httpx pool and reuse
+    connections instead.
+
+    The client is recreated if the running event loop has changed (or the
+    previous client was closed), since an httpx.AsyncClient's underlying
+    transport is bound to the loop it was created on. In normal operation
+    there is exactly one loop for the lifetime of the process; this check
+    mainly matters for test suites that call ``asyncio.run()`` per test.
+    """
+    global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
+    running_loop = asyncio.get_running_loop()
+    if (
+        _HTTP_CLIENT is None
+        or _HTTP_CLIENT.is_closed
+        or _HTTP_CLIENT_LOOP is not running_loop
+    ):
+        _HTTP_CLIENT = httpx.AsyncClient(follow_redirects=True)
+        _HTTP_CLIENT_LOOP = running_loop
+    return _HTTP_CLIENT
+
+
+async def aclose_http_client() -> None:
+    """Close the shared HTTP client, if one has been created.
+
+    Not required for normal stdio server operation (the OS reclaims
+    connections on process exit), but useful for tests and any embedding
+    that wants a clean shutdown.
+    """
+    global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
+    if _HTTP_CLIENT is not None and not _HTTP_CLIENT.is_closed:
+        await _HTTP_CLIENT.aclose()
+    _HTTP_CLIENT = None
+    _HTTP_CLIENT_LOOP = None
 
 
 async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        response = await client.get(url, params=params)
-        response.raise_for_status()
-        return response.text
+    client = _shared_client()
+    response = await client.get(url, params=params, timeout=timeout)
+    response.raise_for_status()
+    return response.text
 
 
 async def _cts_request(request: str, urn: str | None = None, **extra_params: Any) -> str:

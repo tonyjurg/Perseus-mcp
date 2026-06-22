@@ -107,12 +107,16 @@ is not currently sent as a Scaife language filter.
 
 ### `_get(url, params=None, timeout=20.0)`
 
-- Creates `httpx.AsyncClient` with:
-  - timeout 20s (default)
-  - `follow_redirects=True`
+- Lazily creates and reuses one process-wide `httpx.AsyncClient`
+- Recreates the client if the active event loop changes or the client is closed
+- Uses timeout 20s by default and follows redirects
 - Executes GET request
 - Raises for non-2xx status (`response.raise_for_status()`)
 - Returns `response.text`
+
+`aclose_http_client()` is available to embeddings and tests that need explicit
+shutdown. Normal stdio operation keeps the pooled client alive for the server
+process so sequential calls can reuse TCP/TLS connections.
 
 ### `_cts_request(request, urn=None, **extra_params)`
 
