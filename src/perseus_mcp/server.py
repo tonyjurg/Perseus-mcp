@@ -715,8 +715,11 @@ def _merge_author_entries(
                 work.get("urn") for work in existing_works if work.get("urn")
             }
             for work in author.get("works", []):
-                if work.get("urn") not in existing_work_urns:
+                work_urn = work.get("urn")
+                if work_urn not in existing_work_urns:
                     existing_works.append(work)
+                    if work_urn:
+                        existing_work_urns.add(work_urn)
             existing["works_count"] = len(existing_works)
 
     return list(merged.values())
