@@ -1149,6 +1149,8 @@ def _normalize_query_for_search(
     query_format: str = "auto",
     preserve_operators: bool = False,
 ) -> str:
+    if not _normalize_space(query):
+        raise ValueError("query must not be empty")
     lang_code = _normalize_search_language(language)
     if preserve_operators:
         return unicodedata.normalize("NFC", query)

@@ -42,6 +42,27 @@ def test_search_kind_rejects_unknown_values() -> None:
         _normalize_search_kind("phrase")
 
 
+@pytest.mark.parametrize(
+    ("tool_call", "scope_argument"),
+    [
+        (server.search_perseus, None),
+        (server.search_within_text, "urn:cts:greekLit:tlg0012.tlg001"),
+        (
+            server.get_passage_highlights,
+            "urn:cts:greekLit:tlg0012.tlg001:1.1",
+        ),
+    ],
+)
+def test_search_tools_reject_blank_queries(tool_call, scope_argument) -> None:
+    if scope_argument is None:
+        coroutine = tool_call("   ")
+    else:
+        coroutine = tool_call("   ", scope_argument)
+
+    with pytest.raises(ValueError, match="query must not be empty"):
+        asyncio.run(coroutine)
+
+
 def test_search_perseus_uses_scaife_json_search_route(monkeypatch) -> None:
     request: dict[str, object] = {}
 
