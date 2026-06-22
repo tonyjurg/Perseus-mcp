@@ -206,12 +206,20 @@ def _memory_cache_set(name: str, value: str) -> None:
 
 
 def _disk_cache_get(path: Path) -> str | None:
-    if not _cache_enabled() or not path.exists():
+    if not _cache_enabled():
         return None
-    ttl = _cache_ttl_seconds()
-    if ttl and time.time() - path.stat().st_mtime > ttl:
+    try:
+        if not path.exists():
+            return None
+        ttl = _cache_ttl_seconds()
+        if ttl and time.time() - path.stat().st_mtime > ttl:
+            return None
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        # Another process may clear or replace the optional cache between the
+        # existence check, stat, and read. Treat an unavailable entry as a
+        # cache miss so the caller can fetch a fresh upstream response.
         return None
-    return path.read_text(encoding="utf-8")
 
 
 def _disk_cache_set(path: Path, value: str) -> None:
