@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from perseus_mcp.server import _author_resources_from_capabilities
+from perseus_mcp.server import _author_resources_from_capabilities, _merge_author_entries
 
 
 CAPABILITIES_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -86,3 +86,22 @@ def test_author_resources_matches_textgroup_urn_fragment() -> None:
 def test_author_resources_rejects_empty_author_query() -> None:
     with pytest.raises(ValueError, match="author must not be empty"):
         _author_resources_from_capabilities(CAPABILITIES_XML, "  ")
+
+
+def test_merge_author_entries_deduplicates_works_within_incoming_group() -> None:
+    merged = _merge_author_entries(
+        [{"urn": "urn:cts:greekLit:tlg0012", "names": ["Homer"], "works": []}],
+        [
+            {
+                "urn": "urn:cts:greekLit:tlg0012",
+                "names": ["Homer"],
+                "works": [
+                    {"urn": "urn:cts:greekLit:tlg0012.tlg001"},
+                    {"urn": "urn:cts:greekLit:tlg0012.tlg001"},
+                ],
+            }
+        ],
+    )
+
+    assert merged[0]["works_count"] == 1
+    assert merged[0]["works"] == [{"urn": "urn:cts:greekLit:tlg0012.tlg001"}]
