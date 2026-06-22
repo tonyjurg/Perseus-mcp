@@ -172,6 +172,181 @@ python -m perseus_mcp
 npx @modelcontextprotocol/inspector uv run perseus-mcp
 ```
 
+## Test strategy and automation
+
+Perseus MCP uses layered checks rather than relying on one end-to-end test.
+Most behavior is covered by deterministic pytest tests with local XML/JSON
+fixtures and mocked asynchronous HTTP calls. GitHub Actions separately verifies
+the supported Python and operating-system matrix, package artifacts, secrets,
+release tags, and publication.
+
+The workflow files under `.github/workflows/` are the executable source of
+truth.
+
+### Test suite organization
+
+Pytest is configured in `pyproject.toml` to import from `src/` and discover
+tests under `tests/`.
+
+| Test module | Main responsibility |
+| --- | --- |
+| `test_author_resources.py` | CTS author, work, and resource parsing; merged-author behavior |
+| `test_disk_cache.py` | Atomic cache writes, cache disabling, cleanup, and concurrent writers |
+| `test_exploration_tools.py` | Discovery, navigation, cache tools, author scope, and structured responses |
+| `test_greek_query_normalization.py` | Unicode Greek, Beta Code, Scaife parameters, and search operators |
+| `test_limits_and_language.py` | Result limits, paging bounds, and language aliases |
+| `test_packaging.py` | Metadata, dependencies, documentation assets, notebooks, and workflow expectations |
+| `test_scaife_urls.py` | Safe URL construction and CTS URN percent encoding |
+| `test_shared_http_client.py` | Connection reuse, event-loop changes, shutdown, and HTTP errors |
+| `test_xml_hardening.py` | Safe XML parsing and rejection of entity-based XML attacks |
+
+A regression fix should include a focused test that fails for the original
+problem. Tests should assert observable behavior and cover failure paths and
+boundary values as well as successful calls.
+
+### Isolation from Perseus and Scaife
+
+Routine tests do not depend on live upstream services. HTTP helpers are
+monkeypatched with asynchronous test doubles, while representative CTS XML and
+Scaife JSON are stored in test fixtures. This keeps CI deterministic when
+catalogs change or an upstream service is unavailable, avoids unnecessary
+traffic to public scholarly infrastructure, and makes malformed-response tests
+safe.
+
+Live read-only probes may be used during manual review for endpoint
+compatibility or connection-lifecycle changes, but they supplement rather than
+replace the automated suite.
+
+### Async test cleanup
+
+Several tests invoke tools with `asyncio.run()`, which creates a new event loop
+for each call. The server uses a process-wide shared `httpx.AsyncClient`, so the
+autouse fixture in `tests/conftest.py` closes and resets that client after every
+test. Tests that manipulate shared client state must also leave it reset.
+
+### Local test commands
+
+Run the complete suite:
+
+```bash
+python -m pytest
+```
+
+Run a module or one test:
+
+```bash
+python -m pytest tests/test_disk_cache.py
+python -m pytest tests/test_disk_cache.py::test_disk_cache_set_writes_readable_content
+```
+
+Show skipped tests, the slowest tests, and local variables on failure:
+
+```bash
+python -m pytest -ra --durations=10 -l
+```
+
+Disable metadata-cache reads and writes during a test run:
+
+```bash
+PERSEUS_MCP_DISABLE_CACHE=1 python -m pytest
+```
+
+PowerShell equivalent:
+
+```powershell
+$env:PERSEUS_MCP_DISABLE_CACHE = "1"
+python -m pytest
+```
+
+### GitHub Actions test matrix
+
+`.github/workflows/tests.yml` installs the editable project with development
+dependencies and runs `python -m pytest` on:
+
+- Ubuntu and Windows;
+- Python 3.11, 3.12, and 3.13.
+
+The matrix uses `fail-fast: false`, so every platform/version job finishes even
+when one fails. This makes version-specific and Windows-specific regressions
+visible in one run. Documentation-only changes under `docs/**` are excluded
+from the Python test workflow; exact event and branch filters remain defined in
+the workflow file.
+
+### Package validation
+
+`.github/workflows/package.yml` checks that the repository produces a valid
+source distribution and universal wheel. It installs Python 3.12, runs:
+
+```bash
+python -m build
+python -m twine check dist/*
+```
+
+and uploads `dist/` as the `python-package` workflow artifact. The workflow is
+path-filtered to package-relevant files and supports manual dispatch.
+
+`tests/test_packaging.py` complements this build by checking repository-level
+expectations such as metadata, dependencies, documentation files, notebook
+JSON, and workflow configuration. Both layers matter: metadata tests can pass
+while an isolated build fails, and a package can build while required
+repository assets are missing.
+
+### Secret scanning
+
+`.github/workflows/secret-scan.yml` rejects tracked OpenRouter keys matching:
+
+```text
+sk-or-v1-[A-Za-z0-9_-]{20,}
+```
+
+The workflow reports affected files without printing the matching secret. A
+detected key must be removed and rotated; the check should never be bypassed.
+This focused scan does not replace normal credential hygiene: do not commit
+`.env` files, tokens, private MCP configuration, or notebook outputs containing
+credentials.
+
+### Release and publication gates
+
+`.github/workflows/release.yml` runs for `v*` tags or manual dispatch. For tag
+runs it verifies that the tag equals `v<project.version>`, builds the wheel and
+source archive, validates both with Twine, attaches them to a generated GitHub
+release, and dispatches the PyPI workflow using the same tag.
+
+`.github/workflows/publish.yml` requires a tag reference, repeats the
+tag/version check, rebuilds and revalidates the artifacts, and publishes through
+PyPI trusted publishing. The protected `pypi` GitHub environment uses OIDC
+(`id-token: write`), so no long-lived PyPI API token is stored.
+
+Rebuilding during publication avoids trusting an unrelated workflow artifact,
+while the repeated tag check prevents publishing from a branch or mismatched
+release tag.
+
+### Documentation deployment
+
+`.github/workflows/pages.yml` builds `docs/` with Jekyll and deploys the
+generated artifact to GitHub Pages after documentation changes reach `main` or
+`master`. This Pages site is intended primarily for end users; development and
+test-strategy documentation lives in this repository README.
+
+### Interpreting failures
+
+- Failures on every matrix job usually indicate a general regression.
+- A single Python-version failure suggests version-specific syntax,
+  dependencies, or standard-library behavior.
+- Windows-only failures commonly involve paths, permissions, read-only
+  attributes, or event-loop lifecycle.
+- A package failure with green pytest jobs usually concerns metadata,
+  manifests, README rendering, or build isolation.
+- A secret-scan failure requires credential removal and rotation.
+- A release failure before publication commonly means the tag and
+  `project.version` do not match.
+
+Understand the failure before rerunning a job, and preserve useful workflow
+logs or tracebacks in the pull request when the cause is not obvious.
+
+Maintainer-level conventions for extending the suite are also kept beside the
+tests in [`tests/testing.md`](tests/testing.md).
+
 
 ## Example notebooks
 
