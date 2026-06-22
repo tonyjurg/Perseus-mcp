@@ -40,6 +40,7 @@ helpers return locally shaped JSON or readable text.
 
 `search_perseus` normalizes Greek search terms before sending them to Scaife.
 You can pass Unicode Greek directly, or use Beta Code such as `mh=nin a)/eide`.
+Search queries must contain at least one non-whitespace character.
 The default `query_format="auto"` detects explicit Beta Code marks like `=`, `/`, `(`, `)`, and `*`, and also treats short unaccented Greek-looking queries such as `logos` as Beta Code.
 If an ASCII query is ambiguous, set `query_format="betacode"` to force conversion or `query_format="unicode"` to preserve it exactly.
 Search queries are normalized to composed Greek Unicode (NFC), matching sampled Perseus Greek text.
