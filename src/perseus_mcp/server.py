@@ -11,6 +11,7 @@ import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastmcp import FastMCP
@@ -848,16 +849,27 @@ def _normalize_query_for_search(
     return query
 
 
+def _quote_urn_path_segment(urn: str) -> str:
+    """Percent-encode a URN for safe use as a single URL path segment.
+
+    CTS URNs legitimately contain colons and periods, so those are left
+    unescaped for readability; everything else (spaces, '#', '?', '%',
+    non-ASCII characters, etc.) is encoded so the value cannot truncate the
+    URL, inject query parameters, or otherwise change the request target.
+    """
+    return quote(urn, safe=":.")
+
+
 def _scaife_library_url(urn: str) -> str:
-    return f"{SCAIFE_LIBRARY.rstrip('/')}/{urn}/json/"
+    return f"{SCAIFE_LIBRARY.rstrip('/')}/{_quote_urn_path_segment(urn)}/json/"
 
 
 def _scaife_passage_json_url(urn: str) -> str:
-    return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{urn}/json/"
+    return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{_quote_urn_path_segment(urn)}/json/"
 
 
 def _scaife_passage_text_url(urn: str) -> str:
-    return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{urn}/text/"
+    return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{_quote_urn_path_segment(urn)}/text/"
 
 
 def _single_author_text_group_urn(authors: list[dict[str, Any]]) -> str | None:
