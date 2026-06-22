@@ -151,6 +151,10 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_scaife_passage_json(urn)` → Scaife `/library/passage/<urn>/json/`
 - `get_scaife_passage_text(urn)` → Scaife `/library/passage/<urn>/text/`
 
+Scaife library and passage helpers percent-encode the caller-supplied URN as
+one URL path segment. CTS separators such as `:` and `.` remain readable, while
+reserved characters cannot become fragments, query strings, or extra paths.
+
 ### Local metadata cache
 
 CTS `GetCapabilities` and `GetValidReff` responses are stable enough to cache
