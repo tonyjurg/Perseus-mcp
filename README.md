@@ -86,6 +86,9 @@ started. Running the MCP server from the repository root uses
 second cache location for a separate Python process. To keep one cache location
 across notebooks and MCP clients, set `PERSEUS_MCP_CACHE_DIR` to an absolute
 path such as `/path/to/Perseus-mcp/.cache/perseus-mcp`.
+Disk entries are written to unique sibling temporary files and atomically
+replaced, so multiple local processes can safely share that directory without
+exposing partially written cache files.
 
 ## URN Discovery
 
