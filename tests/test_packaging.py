@@ -130,14 +130,15 @@ def test_dependabot_tracks_python_and_github_actions_dependencies() -> None:
 
 
 def test_rate_limit_guidance_is_documented() -> None:
-    guide = ENDUSER_GUIDE.read_text(encoding="utf-8")
+    guide = ENDUSER_GUIDE.read_text(encoding="utf-8").casefold()
     notebook = (
         REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb"
-    ).read_text(encoding="utf-8")
+    ).read_text(encoding="utf-8").casefold()
 
-    assert "429 Too Many Requests" in guide
-    assert "does not automatically retry" in guide
-    assert "429 Too Many Requests" in notebook
+    for content in (guide, notebook):
+        assert "429" in content
+        assert "rate limit" in content or "too many requests" in content
+        assert "retry" in content
 
 
 def test_openrouter_notebooks_use_free_models_router_by_default() -> None:

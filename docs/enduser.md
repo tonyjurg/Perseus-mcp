@@ -422,7 +422,7 @@ Close the process holding the directory and retry `clear_metadata_cache()`.
 | No tools are listed | Confirm the server is connected and ask the client to refresh or list MCP tools |
 | Model ignores tools | Explicitly ask it to use the `perseus` MCP tools or enable tools in the client UI |
 | HTTP 404 or 5xx | Check the URN and consider whether Perseus or Scaife is temporarily unavailable |
-| HTTP 429 | Stop concurrent requests, wait, and retry more slowly |
+| HTTP 429 Too Many Requests | Perseus or Scaife is rate-limiting requests. The server issues an `UpstreamRateLimitWarning`, preserves the upstream HTTP error, and does not automatically retry. Stop concurrent requests, honor `Retry-After` when supplied, wait, and retry more slowly |
 | Unexpected edition URN | Discover a Perseus CTS edition before retrieving the passage |
 | Search mismatch | Check language, `query_format`, `search_kind`, and operator preservation |
 | Cache cannot be cleared | Close processes using it; OneDrive may temporarily lock the directory |

@@ -9,6 +9,7 @@ import shutil
 import stat
 import time
 import unicodedata
+import warnings
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -93,6 +94,10 @@ _HTTP_CLIENT: httpx.AsyncClient | None = None
 _HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
 
 
+class UpstreamRateLimitWarning(UserWarning):
+    """Warn that Perseus or Scaife rejected a request because of rate limiting."""
+
+
 async def _close_http_client(
     client: httpx.AsyncClient,
     client_loop: asyncio.AbstractEventLoop | None,
@@ -161,6 +166,19 @@ async def aclose_http_client() -> None:
 async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
     client = await _shared_client()
     response = await client.get(url, params=params, timeout=timeout)
+    if response.status_code == 429:
+        retry_after = response.headers.get("Retry-After")
+        retry_guidance = (
+            f" Retry after {retry_after} seconds."
+            if retry_after and retry_after.isdigit()
+            else " Wait before retrying and reduce request concurrency."
+        )
+        warnings.warn(
+            f"Upstream service rate limit (HTTP 429) from {response.request.url}."
+            f"{retry_guidance} The request was not retried automatically.",
+            UpstreamRateLimitWarning,
+            stacklevel=2,
+        )
     response.raise_for_status()
     return response.text
 

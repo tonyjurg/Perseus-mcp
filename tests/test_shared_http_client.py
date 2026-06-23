@@ -117,7 +117,9 @@ def test_get_reuses_shared_client_across_calls(monkeypatch) -> None:
     seen_client_ids: list[int] = []
 
     class FakeResponse:
+        status_code = 200
         text = "ok"
+        headers = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -147,7 +149,9 @@ def test_get_reuses_shared_client_across_calls(monkeypatch) -> None:
 
 def test_get_raises_for_non_2xx_status(monkeypatch) -> None:
     class FakeResponse:
+        status_code = 500
         text = "error body"
+        headers = {}
 
         def raise_for_status(self) -> None:
             raise httpx.HTTPStatusError(
@@ -167,3 +171,33 @@ def test_get_raises_for_non_2xx_status(monkeypatch) -> None:
 
     with pytest.raises(httpx.HTTPStatusError):
         asyncio.run(server._get("https://example.invalid/a"))
+
+
+def test_get_warns_and_preserves_429_error(monkeypatch) -> None:
+    request = httpx.Request("GET", "https://example.invalid/rate-limited")
+    response = httpx.Response(
+        429,
+        request=request,
+        headers={"Retry-After": "30"},
+        text="rate limited",
+    )
+
+    class FakeClient:
+        is_closed = False
+
+        async def get(self, url, params=None, timeout=20.0):
+            return response
+
+    async def get_fake_client():
+        return FakeClient()
+
+    monkeypatch.setattr(server, "_shared_client", get_fake_client)
+
+    with pytest.warns(
+        server.UpstreamRateLimitWarning,
+        match=r"HTTP 429.*Retry after 30 seconds.*not retried automatically",
+    ):
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            asyncio.run(server._get(str(request.url)))
+
+    assert exc_info.value.response.status_code == 429
