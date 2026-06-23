@@ -14,6 +14,19 @@ def test_explicit_betacode_search_query_becomes_unicode_greek() -> None:
     assert _normalize_greek_query("mh=nin a)/eide qea/") == "μῆνιν ἄειδε θεά"
 
 
+@pytest.mark.parametrize(
+    ("betacode", "expected"),
+    [
+        ("xa/ris", "χάρις"),
+        ("a)rxh/", "ἀρχή"),
+        ("ci/fos", "ξίφος"),
+        ("*X", "Χ"),
+    ],
+)
+def test_betacode_distinguishes_chi_from_xi(betacode: str, expected: str) -> None:
+    assert _normalize_greek_query(betacode, query_format="betacode") == expected
+
+
 def test_unicode_greek_search_query_is_preserved_and_normalized() -> None:
     assert _normalize_greek_query("μῆνιν") == "μῆνιν"
 
