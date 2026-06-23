@@ -1,0 +1,270 @@
+{
+  "repo_notes": [
+    {
+      "content": "Generate the wiki for Perseus MCP version 1.0.2. Treat pyproject.toml as the canonical version source and describe 1.0.2 as a patch release focused on bug fixes, reliability, test coverage, documentation, packaging, and release-process improvements—not as a major feature release. Use the current src-layout package: the implementation is in src/perseus_mcp/server.py, the package entry point is perseus_mcp.server:main, and there is no supported root-level server.py launcher. Derive tool names and counts from the registered FastMCP tools in the current source; the current documentation groups 23 tools into passage/navigation, discovery, search, Scaife retrieval, and cache management. Clearly distinguish local stdio clients (such as Claude Desktop and Cursor) from ChatGPT: the checked-in server runs over stdio, while ChatGPT requires a separately deployed HTTPS /mcp endpoint and cannot launch the local command directly. Treat OpenRouter as an optional notebook-based LLM integration that requires OPENROUTER_API_KEY; the MCP server and its Perseus/Scaife upstream calls do not require that key. Explain that Perseus CTS and Scaife are separate upstream services whose inventories and edition URNs can differ. Prefer current code, tests, workflows, README.md, tests/testing.md, and docs/ over stale generated wiki text. Avoid duplicating the same material across pages: overview pages should summarize and link to focused reference pages. Do not claim a feature, transport, retry policy, authentication mechanism, or deployment mode unless it exists in the repository. Use exact file paths and source-backed statements, and call out upstream-service limitations separately from project defects."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduce Perseus MCP 1.0.2, its audience, the research problems it solves, its relationship to Perseus CTS and Scaife, and the major documentation areas. Keep this page concise and route readers to setup, concepts, tools, architecture, examples, testing, and release pages.",
+      "page_notes": [
+        {
+          "content": "State prominently that 1.0.2 is a patch release. Use pyproject.toml, README.md, server.json, and CITATION.cff for identity and version metadata. Do not use stale tool or notebook counts."
+        }
+      ]
+    },
+    {
+      "title": "Version 1.0.2 Patch Release",
+      "purpose": "Explain the scope and rationale of version 1.0.2: bug fixes, robustness work, quality checks, documentation improvements, packaging consistency, and release automation. Explain semantic-versioning intent without inventing a changelog.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": "Use git-visible source, tests, workflows, and version metadata. Describe categories of change rather than claiming unverified individual release notes. Explain that tag v1.0.2 must match project.version and is created only after the release commit reaches main."
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "purpose": "Provide a short installation and first-use path with Python 3.11+, uv or pip, the packaged perseus-mcp command, MCP Inspector, and a simple author-to-passage verification workflow.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": "Use README.md, docs/enduser.md, pyproject.toml, and examples/00_install_and_run_perseus_mcp.ipynb. Prefer supported package commands; do not instruct readers to run a root server.py."
+        }
+      ]
+    },
+    {
+      "title": "Client Configuration",
+      "purpose": "Document local stdio configuration for Cursor, Claude Desktop, MCP Inspector, and generic MCP clients, plus the different requirements for ChatGPT and the optional OpenRouter notebook workflow.",
+      "parent": "Getting Started",
+      "page_notes": [
+        {
+          "content": "Keep local stdio, remote ChatGPT, and notebook-adapter workflows separate. State that ChatGPT requires an HTTPS /mcp deployment that is not provided by the current stdio-only launcher. Link the OpenRouter discussion to notebooks 06 and 09 and note that only those workflows require an API key."
+        }
+      ]
+    },
+    {
+      "title": "Configuration and Metadata Cache",
+      "purpose": "Explain environment settings, metadata caching, cache status and maintenance tools, disk-cache location, TTL behavior, disabling the cache, cross-process considerations, and Windows/OneDrive caveats.",
+      "parent": "Getting Started",
+      "page_notes": [
+        {
+          "content": "Use src/perseus_mcp/server.py, README.md, docs/enduser.md, tests/test_disk_cache.py, and tests/test_shared_http_client.py. Distinguish the metadata cache from the shared in-process HTTP client."
+        }
+      ]
+    },
+    {
+      "title": "Key Concepts and Terminology",
+      "purpose": "Explain MCP, FastMCP, CTS, CTS URNs, textgroups, works, editions, translations, passages, Scaife, Beta Code, Unicode Greek, NFC normalization, and discovery-first research.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": "Use examples grounded in current documentation. Emphasize that work-level, passage-level, and edition-specific URNs have different roles and that Scaife and Perseus CTS inventories are not interchangeable."
+        }
+      ]
+    },
+    {
+      "title": "Server Architecture",
+      "purpose": "Describe the src-layout Python package, FastMCP registration, stdio process lifecycle, async request flow, shared HTTP client, parsing and normalization helpers, cache layers, and upstream boundaries.",
+      "page_notes": [
+        {
+          "content": "Use src/perseus_mcp/server.py, src/perseus_mcp/__main__.py, pyproject.toml, and docs/architecture.md. Organize around responsibilities rather than reproducing the source file from top to bottom."
+        }
+      ]
+    },
+    {
+      "title": "Request Pipeline and HTTP Lifecycle",
+      "purpose": "Trace a tool call from MCP arguments through validation, shared httpx client use, upstream requests, response handling, parsing, and returned text or JSON. Cover event-loop-safe client replacement and shutdown behavior.",
+      "parent": "Server Architecture",
+      "page_notes": [
+        {
+          "content": "Use the _shared_client, _get, _cts_request, and aclose_http_client implementations plus tests/test_shared_http_client.py. Do not claim automatic HTTP retry behavior; document current error propagation accurately."
+        }
+      ]
+    },
+    {
+      "title": "XML Parsing and Security",
+      "purpose": "Explain hardened XML parsing, namespace handling, plaintext extraction, reference extraction, navigation fallbacks, and protections against unsafe XML constructs.",
+      "parent": "Server Architecture",
+      "page_notes": [
+        {
+          "content": "Use defusedxml usage in src/perseus_mcp/server.py and tests/test_xml_hardening.py. Distinguish malformed upstream HTML recovery from XML security protections."
+        }
+      ]
+    },
+    {
+      "title": "Greek Query Normalization",
+      "purpose": "Document Unicode Greek and Beta Code handling, auto/betacode/unicode modes, operator preservation, NFC normalization, language aliases, and how normalized queries are sent to Scaife.",
+      "parent": "Server Architecture",
+      "page_notes": [
+        {
+          "content": "Use normalization helpers and tests/test_greek_query_normalization.py. Explain ambiguous ASCII input and preserve_operators without implying that the language parameter is always an upstream corpus filter."
+        }
+      ]
+    },
+    {
+      "title": "MCP Tool Reference",
+      "purpose": "Provide an indexed reference to every currently registered MCP tool, grouped by passage/navigation, discovery, search, Scaife retrieval, and cache management. Summarize signatures, validation, output format, and the most suitable workflow stage.",
+      "page_notes": [
+        {
+          "content": "Derive the definitive list from @mcp.tool registrations in src/perseus_mcp/server.py and verify it against README.md and tests. Do not preserve the old thirteen-tool count. Keep detailed behavior in the category child pages."
+        }
+      ]
+    },
+    {
+      "title": "Passage Retrieval and Navigation Tools",
+      "purpose": "Document passage XML, enriched passage, plaintext, valid-reference, count, label, first-URN, and previous/next tools, including output formats and navigation fallback behavior.",
+      "parent": "MCP Tool Reference",
+      "page_notes": [
+        {
+          "content": "Use the registered tools, tests/test_exploration_tools.py, tests/test_limits_and_language.py, and representative notebook calls. Explain when raw CTS XML is preferable for verification."
+        }
+      ]
+    },
+    {
+      "title": "Author and Work Discovery Tools",
+      "purpose": "Document capabilities retrieval, textgroup listing, author-name discovery, author resources, and work resources, including merging of Perseus CTS and Scaife inventories, language filtering, limits, and deduplication.",
+      "parent": "MCP Tool Reference",
+      "page_notes": [
+        {
+          "content": "Use tests/test_author_resources.py and tests/test_exploration_tools.py. Explain that author discovery can find Scaife-only names and that work/edition availability must still be checked against the intended upstream service."
+        }
+      ]
+    },
+    {
+      "title": "Search and Scaife Retrieval Tools",
+      "purpose": "Document corpus search, search within one text, passage highlights, Scaife library metadata, Scaife passage JSON, and Scaife passage text. Cover form versus lemma search, scoping, pagination, result formats, and URL handling.",
+      "parent": "MCP Tool Reference",
+      "page_notes": [
+        {
+          "content": "Use tests/test_greek_query_normalization.py, tests/test_scaife_urls.py, and tests/test_exploration_tools.py. Keep search behavior separate from CTS passage retrieval and describe edition-URN mismatches explicitly."
+        }
+      ]
+    },
+    {
+      "title": "Cache Management Tools",
+      "purpose": "Document cache status, metadata refresh, and cache clearing tools, including what each operation affects and relevant environment settings.",
+      "parent": "MCP Tool Reference",
+      "page_notes": [
+        {
+          "content": "Use current tool implementations and cache tests. Do not imply that clearing metadata cache closes the shared HTTP client or changes upstream data."
+        }
+      ]
+    },
+    {
+      "title": "Upstream Service Integration",
+      "purpose": "Explain the boundary between Perseus MCP and the public Perseus CTS and Scaife services, including service roles, data flow, availability concerns, rate limiting, and inventory differences.",
+      "page_notes": [
+        {
+          "content": "Make clear which behaviors belong to this repository and which originate upstream. Include the discovery-first workflow and avoid presenting live upstream data as static project-owned data."
+        }
+      ]
+    },
+    {
+      "title": "Perseus CTS Integration",
+      "purpose": "Describe the CTS endpoint, supported CTS operations, XML response handling, URN expectations, valid-reference inventories, passage retrieval, and navigation fallback behavior.",
+      "parent": "Upstream Service Integration",
+      "page_notes": [
+        {
+          "content": "Use CTS_BASE and the current operation wrappers in src/perseus_mcp/server.py. Mention 404, 5xx, malformed navigation responses, and 429 behavior without claiming retries."
+        }
+      ]
+    },
+    {
+      "title": "Scaife Integration",
+      "purpose": "Describe Scaife search and library endpoints, query construction, scoping, pagination, URL encoding, JSON response handling, passage retrieval, and known differences from Perseus CTS editions.",
+      "parent": "Upstream Service Integration",
+      "page_notes": [
+        {
+          "content": "Use SCAIFE_SEARCH, SCAIFE_LIBRARY, search helpers, and URL tests. Distinguish Scaife reader search from library-wide search."
+        }
+      ]
+    },
+    {
+      "title": "Example Notebooks",
+      "purpose": "Provide a current catalog of all notebooks in examples/, ordered by notebook number and grouped into installation, direct upstream exploration, MCP workflows, OpenRouter integrations, advanced search/cache demonstrations, and Latin research.",
+      "page_notes": [
+        {
+          "content": "Enumerate notebooks from the directory rather than relying on an old count. Use docs/notebooks.md and notebook content. Explain which examples are direct HTTP, which use FastMCP Client, and which require OpenRouter."
+        }
+      ]
+    },
+    {
+      "title": "Research Workflow Examples",
+      "purpose": "Show reusable discovery-select-retrieve-navigate-verify workflows for Greek and Latin texts, including Homer, Philo, and Augustine examples, with attention to URN selection and source verification.",
+      "parent": "Example Notebooks",
+      "page_notes": [
+        {
+          "content": "Use notebooks 01–05, 07–08, and 10. Present patterns rather than duplicating every notebook cell."
+        }
+      ]
+    },
+    {
+      "title": "OpenRouter LLM Examples",
+      "purpose": "Explain the optional OpenRouter tool-calling and evidence-synthesis notebooks, API-key handling, free-model routing, resolved-model metadata, tool schemas, and reproducibility limitations.",
+      "parent": "Example Notebooks",
+      "page_notes": [
+        {
+          "content": "Use notebooks 06 and 09, .env.example, README.md, and tests/test_packaging.py. State that OpenRouter is client-side and optional; never imply its key is needed by the MCP server."
+        }
+      ]
+    },
+    {
+      "title": "Testing and Quality Strategy",
+      "purpose": "Explain the test pyramid, fixture and monkeypatch approach, offline versus live checks, packaging tests, notebook validation, security tests, cache and HTTP lifecycle tests, and local commands.",
+      "page_notes": [
+        {
+          "content": "Use tests/testing.md as the primary guide and derive the current test-module inventory from tests/. Explain why most automated tests avoid dependence on live Perseus and Scaife availability."
+        }
+      ]
+    },
+    {
+      "title": "Continuous Integration",
+      "purpose": "Document GitHub Actions for tests, linting, package validation, secret scanning, documentation deployment, release artifact creation, and PyPI publishing, including triggers and path filters.",
+      "parent": "Testing and Quality Strategy",
+      "page_notes": [
+        {
+          "content": "Inspect every workflow under .github/workflows/. Include the Python 3.11, 3.12, and 3.13 test matrix and current action versions. Do not reuse the old three-workflow description."
+        }
+      ]
+    },
+    {
+      "title": "Packaging and Releases",
+      "purpose": "Explain package metadata, src layout, console entry points, build validation, semantic versioning, tag/version matching, GitHub release creation, trusted PyPI publishing, and the development-to-main promotion flow.",
+      "page_notes": [
+        {
+          "content": "Use pyproject.toml, server.json, CITATION.cff, README.md, docs/contributing.md, and release/publish/package workflows. Use 1.0.2 and v1.0.2 as the concrete patch-release example and explain that PyPI versions are immutable."
+        }
+      ]
+    },
+    {
+      "title": "Documentation and Contribution",
+      "purpose": "Explain the end-user GitHub Pages site, README developer/repository guidance, architecture documentation, notebook index, test strategy documentation, contribution workflow, issue templates, citation, and license.",
+      "page_notes": [
+        {
+          "content": "Keep GitHub Pages end-user documentation distinct from DeepWiki's generated engineering reference. Use docs/, README.md, .github/ISSUE_TEMPLATE/, CITATION.cff, and LICENSE."
+        }
+      ]
+    },
+    {
+      "title": "Repository Map",
+      "purpose": "Give maintainers a concise map of src/, tests/, examples/, docs/, scripts/, .github/, package metadata, MCP metadata, and citation/release files, explaining ownership and generated versus source-controlled artifacts.",
+      "parent": "Documentation and Contribution",
+      "page_notes": [
+        {
+          "content": "Use the current repository tree. Do not document cache directories, virtual environments, pyc files, build outputs, or other ignored local artifacts as project components."
+        }
+      ]
+    },
+    {
+      "title": "Glossary",
+      "purpose": "Define project-specific technical, MCP, CTS, Scaife, Unicode, testing, packaging, and classical-text terms with links to their focused wiki pages.",
+      "page_notes": [
+        {
+          "content": "Keep definitions short and avoid duplicating full explanations from Key Concepts, architecture, and integration pages."
+        }
+      ]
+    }
+  ]
+}
