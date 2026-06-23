@@ -7,7 +7,7 @@ import pytest
 
 from perseus_mcp import server
 from perseus_mcp.server import (
-    _author_name_matches_from_capabilities,
+    _author_name_matches_response,
     _author_resources_from_capabilities,
     _first_urn_xml,
     _filter_scaife_search_response_by_author,
@@ -109,6 +109,29 @@ def test_list_text_groups_filters_by_latin_language_and_query() -> None:
     assert result["text_groups"][0]["works"][0]["titles"] == ["Metamorphoses"]
 
 
+def test_list_text_groups_reports_and_pages_all_matches() -> None:
+    result = json.loads(
+        _list_text_groups_from_capabilities(CAPABILITIES_XML, limit=1, offset=0)
+    )
+
+    assert result["total_count"] == 2
+    assert result["offset"] == 0
+    assert result["limit"] == 1
+    assert result["returned_count"] == 1
+    assert result["match_count"] == 1
+    assert result["has_more"] is True
+    assert result["text_groups"][0]["names"] == ["Homer"]
+
+    next_page = json.loads(
+        _list_text_groups_from_capabilities(CAPABILITIES_XML, limit=1, offset=1)
+    )
+
+    assert next_page["total_count"] == 2
+    assert next_page["returned_count"] == 1
+    assert next_page["has_more"] is False
+    assert next_page["text_groups"][0]["names"] == ["Ovid"]
+
+
 def test_author_resources_lists_editions_and_translations() -> None:
     result = json.loads(_author_resources_from_capabilities(CAPABILITIES_XML, "homer"))
 
@@ -125,21 +148,25 @@ def test_author_resources_rejects_empty_author_query() -> None:
 
 
 def test_author_name_matches_only_textgroup_names() -> None:
-    result = json.loads(_author_name_matches_from_capabilities(CAPABILITIES_XML, "Hom"))
+    authors = _matching_author_entries_from_capabilities(
+        CAPABILITIES_XML, "Hom", names_only=True
+    )
+    result = json.loads(_author_name_matches_response(authors, "Hom"))
 
     assert result["match_count"] == 1
     assert result["authors"][0]["names"] == ["Homer"]
     assert result["authors"][0]["matched_names"] == ["Homer"]
 
-    no_title_match = json.loads(
-        _author_name_matches_from_capabilities(CAPABILITIES_XML, "Iliad")
+    title_matches = _matching_author_entries_from_capabilities(
+        CAPABILITIES_XML, "Iliad", names_only=True
     )
+    no_title_match = json.loads(_author_name_matches_response(title_matches, "Iliad"))
     assert no_title_match["match_count"] == 0
 
 
 def test_author_name_matches_rejects_empty_query() -> None:
     with pytest.raises(ValueError, match="query must not be empty"):
-        _author_name_matches_from_capabilities(CAPABILITIES_XML, "  ")
+        asyncio.run(server.find_author_names("  "))
 
 
 def test_scaife_author_catalog_matches_philo_and_filters_language() -> None:

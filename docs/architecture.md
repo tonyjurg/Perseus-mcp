@@ -141,7 +141,7 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_cache_status()` → local metadata cache status
 - `refresh_metadata_cache()` → refresh cached CTS capabilities and Scaife library catalog
 - `clear_metadata_cache()` → clear memory and disk metadata cache entries
-- `list_text_groups(language=None, query=None, limit=100)` → CTS `GetCapabilities`, then local textgroup/work filtering and JSON shaping with a 1–500 limit
+- `list_text_groups(language=None, query=None, limit=100, offset=0)` → CTS `GetCapabilities`, then local textgroup/work filtering, paging, and JSON shaping with a 1–500 limit
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
 - `find_author_names(query, language=None, limit=100)` → cached CTS `GetCapabilities` plus the cached Scaife library catalog, merged by textgroup URN and locally matched against textgroup name fields only with a 1–500 limit
 - `get_work_resources(urn_or_title, language=None)` → CTS `GetCapabilities`, then local work/language filtering and JSON shaping

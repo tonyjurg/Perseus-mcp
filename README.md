@@ -22,7 +22,7 @@ helpers return locally shaped JSON or readable text.
 - `get_cache_status()` — inspect local metadata cache state.
 - `refresh_metadata_cache()` — refresh cached CTS and Scaife library metadata.
 - `clear_metadata_cache()` — clear in-memory and disk metadata cache entries.
-- `list_text_groups(language=None, query=None, limit=100)` — list matching authors/textgroups and works (`limit`: 1–500).
+- `list_text_groups(language=None, query=None, limit=100, offset=0)` — list matching authors/textgroups and works with pagination metadata (`limit`: 1–500).
 - `get_author_resources(author, language=None)` — list works, editions, and translations for a matching author name or CTS textgroup URN.
 - `find_author_names(query, language=None, limit=100)` — find author/textgroup names by partial name match across the CTS and Scaife inventories (`limit`: 1–500).
 - `get_work_resources(urn_or_title, language=None)` — list editions, translations, and resources for a work, optionally filtered by original language.

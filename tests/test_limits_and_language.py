@@ -1,7 +1,10 @@
+import asyncio
+
 import pytest
 
+from perseus_mcp import server
 from perseus_mcp.server import (
-    _author_name_matches_from_capabilities,
+    _author_name_matches_response,
     _bounded_list_limit,
     _list_text_groups_from_capabilities,
     _normalize_search_language,
@@ -45,16 +48,21 @@ def test_list_text_groups_rejects_excessive_limit() -> None:
         _list_text_groups_from_capabilities("<GetCapabilities/>", limit=10_000)
 
 
+def test_list_text_groups_rejects_negative_offset() -> None:
+    with pytest.raises(ValueError, match="offset must not be negative"):
+        _list_text_groups_from_capabilities("<GetCapabilities/>", offset=-1)
+
+
 def test_find_author_names_rejects_excessive_limit() -> None:
     with pytest.raises(ValueError, match="must not exceed 500"):
-        _author_name_matches_from_capabilities("<GetCapabilities/>", "Hom", limit=10_000)
+        _author_name_matches_response([], "Hom", limit=10_000)
 
 
 def test_find_author_names_still_validates_empty_query_first() -> None:
     # Empty-query validation should still fire even with a too-large limit,
     # since the error message for a clearly missing query is more useful.
     with pytest.raises(ValueError, match="query must not be empty"):
-        _author_name_matches_from_capabilities("<GetCapabilities/>", "   ", limit=10_000)
+        asyncio.run(server.find_author_names("   ", limit=10_000))
 
 
 # --- _normalize_search_language ------------------------------------------
