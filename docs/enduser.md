@@ -1,364 +1,442 @@
 ---
 title: End-User Guide
-description: Install, run, and use the Perseus MCP server in MCP-capable clients.
+description: Install, connect, and use the Perseus MCP server with supported clients.
 permalink: /enduser/
 ---
 
-# Perseus MCP Server: End-User Guide
+# Perseus MCP: End-User Guide
 
-This guide explains how to install, run, and use the `perseus` MCP server in tools like Cursor or Claude Desktop.
+Use Perseus MCP with Cursor, Claude Desktop, ChatGPT, or another MCP-capable
+client to discover, search, retrieve, and navigate Greek and Latin texts from
+Perseus CTS and Scaife.
 
-## What You Get
+The server does not require a Perseus, Scaife, or OpenRouter API key. Cursor,
+Claude Desktop, and similar clients can run it locally. ChatGPT instead needs
+an HTTPS-accessible MCP endpoint.
 
-The server provides tools for Greek and Latin text research against Perseus CTS and Scaife search. It is designed as a local MCP bridge: your LLM client starts this server, discovers its tools, and can then call those tools with structured arguments instead of relying on ad hoc web browsing or copied URLs.
+## Quick start
 
-Use it when you want an LLM to help with tasks such as:
+You need:
 
-- finding Perseus CTS URNs for authors and works;
-- retrieving Greek passages by citation;
-- moving to neighboring passages;
-- searching Greek text with Unicode Greek or Beta Code input;
-- keeping the upstream Perseus/Scaife response available for verification.
+- Python 3.11 or newer;
+- [uv](https://docs.astral.sh/uv/) (recommended);
+- an MCP-capable client.
 
-The current implementation exposes twenty-three text-returning tools:
-
-- `get_passage(urn)`
-- `get_passage_plus(urn)`
-- `get_passage_plaintext(urn)`
-- `get_valid_references(urn, level=None)`
-- `get_valid_references_json(urn, level=None, limit=100, offset=0)` (`limit`: 1–500)
-- `count_valid_references(urn, level=None)`
-- `get_capabilities()`
-- `get_cache_status()`
-- `refresh_metadata_cache()`
-- `clear_metadata_cache()`
-- `list_text_groups(language=None, query=None, limit=100)` (`limit`: 1–500)
-- `get_author_resources(author, language=None)`
-- `find_author_names(query, language=None, limit=100)` (`limit`: 1–500)
-- `get_work_resources(urn_or_title, language=None)`
-- `get_label(urn)`
-- `get_first_urn(urn)`
-- `get_prev_next_urn(urn)`
-- `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False, page_num=1, text_group=None, work=None, result_format="instances")`
-- `search_within_text(query, text_urn, ...)`
-- `get_passage_highlights(query, passage_urn, ...)`
-- `get_scaife_library_metadata(urn)`
-- `get_scaife_passage_json(urn)`
-- `get_scaife_passage_text(urn)`
-
-Raw CTS operations return XML text, `search_perseus` returns Scaife JSON text,
-discovery helpers return locally shaped JSON text, and
-`get_passage_plaintext` returns readable passage text.
-
-`search_perseus` defaults to form search. Set `search_kind="lemma"` for lemma
-search. For Scaife operator queries, set `preserve_operators=True` and usually
-`query_format="unicode"` so characters such as quotes, `-`, `|`, `*`, and `~`
-reach Scaife unchanged.
-Use `page_num`, `text_group`, and `work` to page or scope Scaife library search
-server-side. `search_within_text` uses Scaife's reader search endpoint for one
-edition/text URN.
-
-CTS capabilities and valid reference metadata are cached locally by default.
-Use `get_cache_status()`, `refresh_metadata_cache()`, and
-`clear_metadata_cache()` to inspect or manage the cache. Set
-`PERSEUS_MCP_DISABLE_CACHE=1` to disable it, `PERSEUS_MCP_CACHE_DIR` to change
-the disk location, or `PERSEUS_MCP_CACHE_TTL_SECONDS` to adjust expiry.
-By default, the disk cache is relative to the Python process current working
-directory. A server started from the project root uses `.cache/perseus-mcp`,
-while a notebook kernel started inside `examples/` would otherwise use
-`examples/.cache/perseus-mcp`. This does not start two MCP servers; it only
-means two separate Python processes can have separate disk cache directories
-and separate in-memory caches. Set `PERSEUS_MCP_CACHE_DIR` to one absolute path
-when you want notebooks and MCP clients to share the same disk cache.
-On Windows, OneDrive may mark synchronized cache directories as read-only
-reparse points. `clear_metadata_cache()` clears that attribute before retrying
-deletion. A directory actively locked by OneDrive or another process may still
-need the other process to release it first.
-
-## Prerequisites
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) recommended (or pip)
-- An MCP-capable client (Cursor, Claude Desktop, MCP Inspector)
-
-## Install
-
-From the project root:
+From the project directory:
 
 ```bash
 uv sync
-```
-
-Alternative:
-
-```bash
-pip install -e .
-```
-
-## Run the Server
-
-```bash
 uv run perseus-mcp
 ```
 
-## Quick Tool Testing (Inspector)
+If the second command starts without an error, the server is ready. Stop it
+with `Ctrl+C`, then add it to your MCP client using the configuration below.
+
+Prefer pip?
 
 ```bash
-npx @modelcontextprotocol/inspector uv run perseus-mcp
+pip install -e .
+perseus-mcp
 ```
 
-Use the inspector UI to call tools and verify responses.
+## Connect your MCP client
 
-## Use with the LLM Client of Your Choice
-
-MCP separates the tool server from the model. This repository does not choose an
-LLM for you. Instead, it exposes tools that any MCP-capable client can attach to
-a model from its supported providers. The same local server command is the key
-piece of configuration:
+For a local MCP client, the application launches this command:
 
 ```bash
 uv --directory /full/path/to/Perseus-mcp run perseus-mcp
 ```
 
-When configuring a client, map that command into the client's MCP-server config.
-Most clients ask for the same conceptual fields:
+Replace `/full/path/to/Perseus-mcp` with the absolute path to this repository.
+
+<details>
+<summary><strong>Cursor configuration</strong></summary>
+
+### Cursor
+
+Open or create `mcp.json`:
+
+- Windows: `%APPDATA%\Cursor\mcp.json`
+- macOS: `~/Library/Application Support/Cursor/mcp.json`
+
+Add:
+
+```json
+{
+  "mcpServers": {
+    "perseus": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/full/path/to/Perseus-mcp",
+        "run",
+        "perseus-mcp"
+      ]
+    }
+  }
+}
+```
+
+Restart Cursor and confirm that the `perseus` server appears in its MCP tools.
+
+</details>
+
+<details>
+<summary><strong>Claude Desktop configuration</strong></summary>
+
+### Claude Desktop
+
+In Claude Desktop, open **Settings → Developer → Edit Config**, or edit:
+
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+Add the same server configuration:
+
+```json
+{
+  "mcpServers": {
+    "perseus": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/full/path/to/Perseus-mcp",
+        "run",
+        "perseus-mcp"
+      ]
+    }
+  }
+}
+```
+
+Completely quit and reopen Claude Desktop. Start a new conversation and ask
+Claude to list the available `perseus` tools.
+
+If the client cannot find `uv`, replace `"uv"` with the full executable path
+returned by:
+
+```bash
+where uv
+```
+
+On macOS or Linux:
+
+```bash
+which uv
+```
+
+</details>
+
+<details>
+<summary><strong>Other local MCP clients</strong></summary>
+
+### Other local MCP clients
+
+Use these values when a client asks for separate fields:
 
 | Field | Value |
 | --- | --- |
 | Server name | `perseus` |
 | Command | `uv` |
-| Arguments | `--directory`, `/full/path/to/Perseus-mcp`, `run`, `perseus-mcp` |
-| Environment | usually empty |
-| Transport | stdio/local process, if the client asks |
+| Arguments | `--directory`, absolute project path, `run`, `perseus-mcp` |
+| Transport | Local process / stdio |
+| Environment | Usually empty |
 
-After connection, ask your client to list MCP tools or inspect the `perseus`
-server. You should see tools such as `find_author_names`, `get_author_resources`,
-`get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
+Clients may call the configuration section `mcpServers`, `servers`, or
+something similar. Consult the client documentation for its exact file
+location and JSON shape.
 
-### Prompting pattern for any LLM
+</details>
 
-For reliable results, ask the model to use the tools in a research sequence:
+<details>
+<summary><strong>ChatGPT configuration</strong></summary>
 
-1. **Discover**: call
-   `get_author_resources("urn:cts:greekLit:tlg0012", language="greek")` or
-   `list_text_groups(language="greek", query="Homer")`.
-2. **Select a URN**: choose an edition/work URN from the JSON or XML result.
-3. **Fetch or navigate**: call `get_passage_plaintext(...)`,
-   `get_valid_references(...)`, or `get_prev_next_urn(...)`.
-4. **Verify**: when precision matters, call `get_passage(...)` or
-   `get_passage_plus(...)` to inspect the raw CTS XML.
+### ChatGPT
 
-If your preferred LLM application does not support MCP natively, you can still
-use the notebooks or write a small Python adapter with FastMCP's `Client` to call
-these tools and pass the results into that application manually. The optional
-`examples/06_openrouter_llm_mcp_interaction.ipynb` notebook demonstrates such a
-client-side adapter for OpenRouter; it requires an OpenRouter API key, unlike
-the MCP server and its public Perseus/Scaife upstream calls.
+ChatGPT supports MCP apps, but it cannot launch this repository as a local
+stdio process. It connects to a server through a reachable HTTPS `/mcp`
+endpoint.
 
-To configure that optional notebook, copy `.env.example` to `.env` in the
-project root and replace the placeholder:
+The current Perseus MCP command therefore cannot be pasted directly into
+ChatGPT. A ChatGPT-compatible deployment needs:
 
-```dotenv
-OPENROUTER_API_KEY=sk-or-v1-...
-```
+1. an HTTP transport for the FastMCP server;
+2. an HTTPS deployment or a secure development tunnel;
+3. a connector URL ending in `/mcp`.
 
-Get your API key at [openrouter.ai](https://openrouter.ai/settings/keys). See
-[OpenRouter's API key documentation](https://openrouter.ai/docs/api-keys) for
-authentication details.
-Notebook `06_` loads the project-root `.env` file without overriding an existing
-environment variable. The `.env` file is ignored by Git and must not be
-committed.
+After such an endpoint is available:
 
-The OpenRouter notebooks default to `OPENROUTER_MODEL=openrouter/free`. The
-Free Models Router chooses from free models available at request time and
-filters for requested capabilities such as tool calling or structured output.
-This keeps the examples flexible when an individual free model disappears or
-has no capacity. Because the concrete model can vary between calls, inspect the
-recorded `resolved_model` metadata or set `OPENROUTER_MODEL` to a fixed slug
-when reproducibility is more important than availability.
+1. In ChatGPT, open **Settings → Apps & Connectors → Advanced settings**.
+2. Enable **Developer mode**.
+3. Under **Apps & Connectors**, choose **Create**.
+4. Enter a name, description, and the HTTPS `/mcp` URL.
+5. Create the connector and confirm that the Perseus tools are listed.
+6. In a new conversation, add the connector from the tools menu.
 
-You may save and commit notebook `06_` with its LLM and tool-call outputs so
-they render on GitHub. The notebook file does not store Python variables or
-kernel memory, and the implementation does not print the key. Review visible
-outputs and run this secret scan before committing:
+For local development, OpenAI documents its Secure MCP Tunnel as one option.
+An internet-facing deployment should also use appropriate authentication,
+rate limiting, monitoring, and request limits.
+
+See OpenAI's
+[ChatGPT MCP connection guide](https://developers.openai.com/apps-sdk/deploy/connect-chatgpt)
+for the current interface and deployment requirements.
+
+</details>
+
+<details>
+<summary><strong>OpenRouter notebook workflow</strong></summary>
+
+### OpenRouter
+
+OpenRouter is not a native local MCP host. The project notebooks instead use a
+small Python client that calls the local Perseus MCP tools and passes their
+results into an OpenRouter-hosted model.
+
+This workflow requires an OpenRouter API key, but the Perseus MCP server itself
+still does not require one.
+
+1. Copy `.env.example` to `.env`.
+2. Add `OPENROUTER_API_KEY`.
+3. Optionally set `OPENROUTER_MODEL`; the examples default to
+   `openrouter/free`.
+4. Run one of the OpenRouter notebooks.
+5. Never commit `.env`.
+
+Start with:
+
+- [all example notebooks](https://tonyjurg.github.io/Perseus-mcp/notebooks/);
+- [OpenRouter LLM MCP interaction](https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/06_openrouter_llm_mcp_interaction.ipynb);
+- [OpenRouter Philo *Politeia* analysis](https://nbviewer.org/github/tonyjurg/Perseus-mcp/blob/main/examples/09_openrouter_philo_politeia_analysis.ipynb).
+
+Before committing notebook outputs, scan the notebook for an accidentally
+saved key:
 
 ```bash
-rg "sk-or-v1-[A-Za-z0-9_-]{20,}" examples/06_openrouter_llm_mcp_interaction.ipynb
+rg "sk-or-v1-[A-Za-z0-9_-]{20,}" examples/*.ipynb
 ```
 
-The command should produce no output. It does not match the documented
-`sk-or-v1-...` placeholder.
+The command should produce no output.
 
-## Configure Cursor
+</details>
 
-Edit your `mcp.json`:
+## Verify the connection
 
-- macOS: `~/Library/Application Support/Cursor/mcp.json`
-- Windows: `%APPDATA%\Cursor\mcp.json`
+After restarting a local client, or adding the connector to a ChatGPT
+conversation:
 
-Example:
+1. Confirm that the `perseus` MCP server is connected.
+2. Ask the client to list its Perseus tools.
+3. Try:
 
-```json
-{
-  "mcpServers": {
-    "perseus": {
-      "command": "uv",
-      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "perseus-mcp"],
-      "env": {}
-    }
-  }
-}
+   > Use the Perseus tools to find Homer and list his available works.
+
+You should see calls to tools such as `find_author_names`,
+`get_author_resources`, or `list_text_groups`.
+
+You can also test the server independently with MCP Inspector:
+
+```bash
+npx @modelcontextprotocol/inspector uv run perseus-mcp
 ```
 
-Restart Cursor, then confirm the `perseus` server and tools appear.
+## A reliable research workflow
 
-## Configure Claude Desktop
+Ask the model to work in four stages:
 
-Claude Desktop is an MCP-capable host for local stdio servers. The latest
-Claude-related project documentation already treats Claude Desktop like Cursor
-and MCP Inspector: it launches the same local `perseus` server and then exposes
-the discovered tools to the selected Claude conversation. The only Claude-specific
-part is where you place the JSON configuration and how you restart/debug the
-desktop app.
+1. **Discover** an author, work, or CTS URN.
+2. **Select** the appropriate work or edition.
+3. **Retrieve or navigate** passages.
+4. **Verify** important results against raw CTS XML.
 
-Open Claude Desktop settings, go to **Developer**, and choose **Edit Config**.
-You can also edit the configuration file directly:
+Example prompt:
 
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+> Use the Perseus tools to find Homer's *Iliad*. Select a Greek CTS edition,
+> retrieve Iliad 1.1–1.7 as plain text, and then show the raw CTS response used
+> to verify it.
 
-Add or merge the `perseus` entry under `mcpServers`:
+Useful tools at each stage:
 
-```json
-{
-  "mcpServers": {
-    "perseus": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/full/path/to/Perseus-mcp",
-        "run",
-        "perseus-mcp"
-      ],
-      "env": {}
-    }
-  }
-}
-```
+| Task | Recommended tools |
+| --- | --- |
+| Find an author | `find_author_names`, `list_text_groups` |
+| Find works and editions | `get_author_resources`, `get_work_resources` |
+| Retrieve a passage | `get_passage_plaintext`, `get_passage`, `get_passage_plus` |
+| Explore citations | `get_valid_references_json`, `count_valid_references` |
+| Move through a text | `get_first_urn`, `get_prev_next_urn` |
+| Search the corpus | `search_perseus` |
+| Search one edition | `search_within_text`, `get_passage_highlights` |
+| Inspect Scaife data | `get_scaife_library_metadata`, `get_scaife_passage_json` |
 
-Use an absolute project path. If Claude Desktop cannot find `uv`, replace
-`"uv"` with the full executable path returned by `which uv` on macOS or
-`where uv` on Windows. Save the file and completely quit and reopen Claude
-Desktop so it reloads the MCP server list.
+## Discover authors, works, and URNs
 
-After restart, open a new Claude conversation and look for the MCP/tool indicator
-or ask Claude to list available MCP tools. You should see the same `perseus`
-tools documented above, including `get_author_resources`,
-`get_passage_plaintext`, `get_prev_next_urn`, and `search_perseus`.
-
-Claude Desktop troubleshooting notes:
-
-- If the server does not appear, validate the JSON syntax and confirm the
-  `--directory` path is absolute and exists.
-- Run `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` manually from a
-  terminal to catch startup errors before debugging Claude.
-- Check Claude MCP logs when startup fails: `~/Library/Logs/Claude` on macOS or
-  `%APPDATA%\Claude\logs` on Windows.
-- The Perseus MCP server does not require an API key. Only the optional
-  OpenRouter notebook uses `OPENROUTER_API_KEY`.
-
-For background, the official MCP local-server guide uses Claude Desktop as its
-example host and documents the same `mcpServers` JSON structure and config-file
-locations: <https://modelcontextprotocol.io/docs/tutorials/use-local-mcp-server>.
-
-## Generic MCP JSON Example
-
-Some clients use a JSON structure similar to Cursor's but with different file
-locations. If your client supports local stdio MCP servers, adapt this shape:
-
-```json
-{
-  "mcpServers": {
-    "perseus": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/full/path/to/Perseus-mcp",
-        "run",
-        "perseus-mcp"
-      ],
-      "env": {}
-    }
-  }
-}
-```
-
-Check your client's documentation for the exact config-file path and whether it
-uses `mcpServers`, `servers`, or another top-level key. The command and argument
-values are the important part.
-
-## Discovery Tools
-
-The discovery helpers are useful when you do not yet know the exact CTS URN to fetch:
-
-- `list_text_groups(language=None, query=None, limit=100)` lists author/textgroup matches and their works. Use a `limit` from 1 through 500, `language="greek"` or `language="latin"` to focus the inventory, and `query` to match author names, textgroup URNs, or work titles.
-- `get_author_resources(author, language=None)` returns detailed JSON for a matching author or textgroup, including work URNs, titles, languages, editions, translations, and other resource URNs.
-- `find_author_names(query, language=None, limit=100)` accepts a `limit` from 1 through 500, merges the Perseus CTS and Scaife library inventories, and then matches only author/textgroup name fields. Partial queries such as `"Hom"` return author names without also matching work titles, while Scaife-only entries such as Philo Judaeus remain discoverable.
-- `get_work_resources(urn_or_title, language=None)` narrows directly to a work title or work URN, returns its editions/translations/resources with author context, and can restrict matches to an original work language such as `"greek"` or `"latin"`.
-- `get_passage_plaintext(urn)` fetches a passage through CTS and extracts readable text from the returned XML.
+Start with discovery instead of guessing CTS URNs.
 
 Examples:
 
-- `list_text_groups(language="greek", query="Homer")`
-- `list_text_groups(language="latin", query="Ovid")`
-- `find_author_names("Hom", language="greek")`
-- `get_author_resources("urn:cts:greekLit:tlg0012", language="greek")`
-- `get_work_resources("Epistualae", language="latin")`
-- `get_work_resources("Iliad")`
-- `get_passage_plaintext("urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1")`
+```text
+find_author_names("Hom", language="greek")
+list_text_groups(language="latin", query="Ovid")
+get_author_resources("Homer", language="greek")
+get_work_resources("Iliad")
+```
 
-## URN Tips
+Typical CTS URNs:
 
-Typical CTS URN patterns:
+| Level | Example |
+| --- | --- |
+| Work | `urn:cts:greekLit:tlg0012.tlg001` |
+| Passage | `urn:cts:greekLit:tlg0012.tlg001:1.1-1.10` |
+| Edition passage | `urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1` |
 
-- Work level: `urn:cts:greekLit:tlg0012.tlg001`
-- Passage level: `urn:cts:greekLit:tlg0012.tlg001:1.1-1.10`
-- Edition-specific: `urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1`
+Perseus CTS and Scaife may expose different editions of the same work. Use
+`get_author_resources` or `get_work_resources` to discover a CTS edition before
+requesting a CTS passage.
 
-Do not assume that an edition URN returned by Scaife search is also available
-from Perseus CTS. Discover CTS editions first with `get_author_resources(...)`
-or `get_work_resources(...)`. For example, recorded notebook runs have shown a
-Perseus CTS *Iliad* edition ending in `perseus-grc1` while Scaife search results
-used `perseus-grc2`; either inventory may change.
+## Retrieve and navigate passages
 
-Recommended workflow:
+For readable text:
 
-1. Start with `find_author_names(...)`, `list_text_groups(...)`, `get_author_resources(...)`, or `get_work_resources(...)` to discover useful URNs without parsing the full capabilities XML manually.
-2. Use `get_label(urn)` for human-readable metadata.
-3. Use `get_valid_references(urn)` and optionally `level` to discover citations.
-4. Fetch text with `get_passage(...)`, `get_passage_plus(...)`, or `get_passage_plaintext(...)`.
-5. Navigate using `get_prev_next_urn(...)`.
+```text
+get_passage_plaintext(
+  "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1"
+)
+```
 
-`get_first_urn(...)` and `get_prev_next_urn(...)` normally request the
-corresponding CTS operations. If Perseus returns malformed HTML for those
-operations, the server derives a well-formed XML result from
-`GetValidReff`.
+For the original CTS response:
+
+```text
+get_passage(
+  "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1"
+)
+```
+
+For neighboring citations:
+
+```text
+get_prev_next_urn(
+  "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1"
+)
+```
+
+If Perseus returns malformed HTML for a navigation operation, the server can
+derive a well-formed result from the valid-reference inventory.
+
+## Search Greek and Latin text
+
+`search_perseus` searches the Scaife library:
+
+```text
+search_perseus("μῆνιν", language="greek")
+```
+
+Greek can also be entered as Beta Code:
+
+```text
+search_perseus("mh=nin", language="greek", query_format="betacode")
+```
+
+Useful options:
+
+- `search_kind="lemma"` searches lemmas instead of surface forms;
+- `author="Homer"` scopes by a resolved author;
+- `text_group=...` or `work=...` scopes directly by URN;
+- `page_num=2` requests another results page;
+- `result_format="passages"` groups results by passage;
+- `preserve_operators=True` preserves quotes and operators such as `-`, `|`,
+  `*`, and `~`.
+
+For ambiguous ASCII input, set `query_format="betacode"` to convert it or
+`query_format="unicode"` to preserve it.
+
+## Tool groups
+
+The server currently provides 23 text-returning tools.
+
+### Passage and navigation
+
+- `get_passage`
+- `get_passage_plus`
+- `get_passage_plaintext`
+- `get_valid_references`
+- `get_valid_references_json`
+- `count_valid_references`
+- `get_label`
+- `get_first_urn`
+- `get_prev_next_urn`
+
+### Discovery
+
+- `get_capabilities`
+- `list_text_groups`
+- `find_author_names`
+- `get_author_resources`
+- `get_work_resources`
+
+### Search
+
+- `search_perseus`
+- `search_within_text`
+- `get_passage_highlights`
+
+### Scaife retrieval
+
+- `get_scaife_library_metadata`
+- `get_scaife_passage_json`
+- `get_scaife_passage_text`
+
+### Cache management
+
+- `get_cache_status`
+- `refresh_metadata_cache`
+- `clear_metadata_cache`
+
+Raw CTS tools return XML text. Search tools return Scaife JSON text. Discovery
+tools return locally shaped JSON text. `get_passage_plaintext` returns readable
+text.
+
+## Metadata cache
+
+The server caches stable CTS capabilities, valid references, and Scaife library
+metadata to reduce repeat requests.
+
+| Setting | Purpose |
+| --- | --- |
+| `PERSEUS_MCP_DISABLE_CACHE=1` | Disable memory and disk caching |
+| `PERSEUS_MCP_CACHE_DIR` | Choose an absolute disk-cache directory |
+| `PERSEUS_MCP_CACHE_TTL_SECONDS` | Change the expiry time |
+
+By default, the cache is stored at `.cache/perseus-mcp` relative to the
+process's working directory. Use one absolute `PERSEUS_MCP_CACHE_DIR` if an MCP
+client and notebook should share the same disk cache.
+
+On Windows, OneDrive can temporarily lock or mark cache directories read-only.
+Close the process holding the directory and retry `clear_metadata_cache()`.
 
 ## Troubleshooting
 
-- **HTTP 4xx/5xx**: Remote service may be unavailable, URN may be invalid, or endpoint behavior may have changed.
-- **HTTP 429 Too Many Requests**: Perseus is rate-limiting the client because
-  too many CTS requests were made in a short period. This does not necessarily
-  mean that the URN is invalid. Stop the loop or batch, wait before retrying,
-  and then resume at a lower request rate. Avoid concurrent passage calls,
-  insert a delay between calls, and use the cached discovery/reference tools
-  instead of repeatedly downloading the same metadata. The server currently
-  propagates the upstream `HTTPStatusError`; it does not automatically retry a
-  `429` response.
-- **No tools in client**: Verify the command/path in your MCP config, and ensure `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` works manually.
-- **Client connects but the model does not call tools**: explicitly ask the model to use the `perseus` MCP tools, or use the client's tool picker/approval UI if it has one.
-- **Wrong model/provider**: model choice is controlled by your LLM client, not by this server. Keep this MCP server config the same and choose the desired model in the client.
-- **Search mismatch**: `search_perseus` accepts Unicode Greek or Beta Code for Greek queries. For ambiguous ASCII, set `query_format="betacode"` or `query_format="unicode"`. For Scaife operator queries, set `preserve_operators=True`; otherwise Beta Code auto-detection may consume characters such as `+`, `|`, or `*`. The `language` argument accepts Greek aliases (`greek`, `grc`, `gr`) or Latin aliases (`latin`, `lat`, `la`); blank input defaults to Greek and other values raise an error. It controls query normalization but is not currently sent to Scaife as a corpus language filter. The optional `author` argument uses a server-side Scaife `text_group` filter when it resolves to one textgroup, and otherwise falls back to local filtering over the current result page.
-- **Blank search query**: search tools reject empty or whitespace-only queries before contacting Scaife.
-- **Unexpected edition URN**: Scaife search and Perseus CTS do not always expose the same edition identifiers. Use the discovery tools before calling CTS passage or navigation tools.
+| Problem | What to check |
+| --- | --- |
+| Server does not appear | Validate the JSON, use an absolute project path, and restart the client completely |
+| Client cannot find `uv` | Use the full executable path returned by `where uv` or `which uv` |
+| Server fails to start | Run `uv --directory /full/path/to/Perseus-mcp run perseus-mcp` in a terminal |
+| No tools are listed | Confirm the server is connected and ask the client to refresh or list MCP tools |
+| Model ignores tools | Explicitly ask it to use the `perseus` MCP tools or enable tools in the client UI |
+| HTTP 404 or 5xx | Check the URN and consider whether Perseus or Scaife is temporarily unavailable |
+| HTTP 429 | Stop concurrent requests, wait, and retry more slowly |
+| Unexpected edition URN | Discover a Perseus CTS edition before retrieving the passage |
+| Search mismatch | Check language, `query_format`, `search_kind`, and operator preservation |
+| Cache cannot be cleared | Close processes using it; OneDrive may temporarily lock the directory |
 
+Claude Desktop logs:
+
+- Windows: `%APPDATA%\Claude\logs`
+- macOS: `~/Library/Logs/Claude`
+
+## Next steps
+
+- Browse the [example notebooks](https://tonyjurg.github.io/Perseus-mcp/notebooks/)
+  for guided workflows.
+- See the [architecture guide](https://tonyjurg.github.io/Perseus-mcp/architecture/)
+  for implementation details.
+- Report reproducible problems through the
+  [GitHub issue tracker](https://github.com/tonyjurg/Perseus-mcp/issues).
