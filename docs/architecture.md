@@ -143,7 +143,7 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `clear_metadata_cache()` → clear memory and disk metadata cache entries
 - `list_text_groups(language=None, query=None, limit=100, offset=0)` → CTS `GetCapabilities`, then local textgroup/work filtering, paging, and JSON shaping with a 1–500 limit
 - `get_author_resources(author, language=None)` → CTS `GetCapabilities`, then local textgroup filtering and JSON shaping
-- `find_author_names(query, language=None, limit=100)` → cached CTS `GetCapabilities` plus the cached Scaife library catalog, merged by textgroup URN and locally matched against textgroup name fields only with a 1–500 limit
+- `find_author_names(query, language=None, limit=100, offset=0)` → cached CTS `GetCapabilities` plus the cached Scaife library catalog, merged by textgroup URN, locally matched against textgroup name fields, and paged with a 1–500 limit
 - `get_work_resources(urn_or_title, language=None)` → CTS `GetCapabilities`, then local work/language filtering and JSON shaping
 - `get_label(urn)` → CTS `GetLabel`
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed

@@ -58,6 +58,11 @@ def test_find_author_names_rejects_excessive_limit() -> None:
         _author_name_matches_response([], "Hom", limit=10_000)
 
 
+def test_find_author_names_rejects_negative_offset() -> None:
+    with pytest.raises(ValueError, match="offset must not be negative"):
+        _author_name_matches_response([], "Hom", offset=-1)
+
+
 def test_find_author_names_still_validates_empty_query_first() -> None:
     # Empty-query validation should still fire even with a too-large limit,
     # since the error message for a clearly missing query is more useful.

@@ -166,6 +166,36 @@ def test_author_name_matches_only_textgroup_names() -> None:
     assert no_title_match["match_count"] == 0
 
 
+def test_author_name_matches_reports_and_pages_all_matches() -> None:
+    authors = [
+        {
+            "urn": f"urn:cts:greekLit:tlg{index:04d}",
+            "names": [f"Author {index}"],
+            "works_count": 0,
+            "works": [],
+        }
+        for index in range(3)
+    ]
+
+    first_page = json.loads(
+        server._author_name_matches_response(authors, "Author", limit=2)
+    )
+    second_page = json.loads(
+        server._author_name_matches_response(authors, "Author", limit=2, offset=2)
+    )
+
+    assert first_page["total_count"] == 3
+    assert first_page["returned_count"] == 2
+    assert first_page["match_count"] == 2
+    assert first_page["offset"] == 0
+    assert first_page["limit"] == 2
+    assert first_page["has_more"] is True
+    assert second_page["total_count"] == 3
+    assert second_page["returned_count"] == 1
+    assert second_page["has_more"] is False
+    assert second_page["authors"][0]["names"] == ["Author 2"]
+
+
 def test_author_name_matches_rejects_empty_query() -> None:
     with pytest.raises(ValueError, match="query must not be empty"):
         asyncio.run(server.find_author_names("  "))
