@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import stat
+import sys
 import time
 import unicodedata
 import warnings
@@ -349,14 +350,15 @@ def _cache_status() -> str:
     )
 
 
-def _remove_readonly_cache_entry(function, path: str, exc_info) -> None:
+def _remove_readonly_cache_entry(
+    function, path: str, error: BaseException
+) -> None:
     """Make a protected cache entry writable and retry its removal.
 
     On Unix, a protected parent directory can prevent even ``chmod`` from
     reaching the failed entry. Restore access to the parent first, then make
     the entry writable and retry the failed removal operation.
     """
-    error = exc_info[1]
     if not isinstance(error, PermissionError):
         raise error
 
@@ -376,10 +378,23 @@ def _remove_readonly_cache_entry(function, path: str, exc_info) -> None:
     os.chmod(path, stat.S_IMODE(path_mode) | required_mode)
 
     if function in (os.open, os.scandir):
-        shutil.rmtree(path, onerror=_remove_readonly_cache_entry)
+        _rmtree(path)
         return
 
     function(path)
+
+
+def _remove_readonly_cache_entry_legacy(function, path: str, exc_info) -> None:
+    """Adapt the Python 3.11 ``onerror`` callback to the ``onexc`` handler."""
+    _remove_readonly_cache_entry(function, path, exc_info[1])
+
+
+def _rmtree(path: str | os.PathLike[str]) -> None:
+    """Remove a tree with the supported error callback API."""
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_remove_readonly_cache_entry)
+    else:
+        shutil.rmtree(path, onerror=_remove_readonly_cache_entry_legacy)
 
 
 def _clear_cache() -> str:
@@ -387,7 +402,7 @@ def _clear_cache() -> str:
     cache_dir = _cache_dir()
     removed = cache_dir.exists()
     if removed:
-        shutil.rmtree(cache_dir, onerror=_remove_readonly_cache_entry)
+        _rmtree(cache_dir)
     return json.dumps(
         {"cache_dir": str(cache_dir), "memory_entries": 0, "disk_cache_removed": removed},
         ensure_ascii=False,
