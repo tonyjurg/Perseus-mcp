@@ -227,6 +227,44 @@ def test_passage_plaintext_extracts_readable_lines() -> None:
     assert plaintext == "μῆνιν ἄειδε θεὰ\narma virumque cano"
 
 
+def test_passage_plaintext_preserves_repeated_nested_lines() -> None:
+    passage_xml = """<GetPassage>
+      <reply>
+        <TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <text>
+            <body>
+              <div>
+                <l><seg>Repeated refrain</seg></l>
+                <l><seg>Repeated refrain</seg></l>
+              </div>
+            </body>
+          </text>
+        </TEI>
+      </reply>
+    </GetPassage>"""
+
+    plaintext = _passage_plaintext_from_xml(passage_xml)
+
+    assert plaintext == "Repeated refrain\nRepeated refrain"
+
+
+def test_passage_plaintext_prefers_blocks_inside_wrapping_quote() -> None:
+    passage_xml = """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+      <text>
+        <body>
+          <quote>
+            <p>First paragraph</p>
+            <p>Second paragraph</p>
+          </quote>
+        </body>
+      </text>
+    </TEI>"""
+
+    plaintext = _passage_plaintext_from_xml(passage_xml)
+
+    assert plaintext == "First paragraph\nSecond paragraph"
+
+
 def test_prev_next_xml_uses_valid_reference_order() -> None:
     references_xml = """<GetValidReff>
       <reply>
