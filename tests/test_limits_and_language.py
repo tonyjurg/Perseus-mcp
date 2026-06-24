@@ -65,6 +65,18 @@ def test_find_author_names_still_validates_empty_query_first() -> None:
         asyncio.run(server.find_author_names("   ", limit=10_000))
 
 
+def test_search_within_text_rejects_excessive_size() -> None:
+    with pytest.raises(ValueError, match="size must not exceed 500"):
+        asyncio.run(
+            server.search_within_text(
+                "arma",
+                "urn:cts:latinLit:phi0690.phi003",
+                language="latin",
+                size=10_000,
+            )
+        )
+
+
 # --- _normalize_search_language ------------------------------------------
 
 

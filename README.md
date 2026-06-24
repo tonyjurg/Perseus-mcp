@@ -30,7 +30,7 @@ helpers return locally shaped JSON or readable text.
 - `get_first_urn(urn)` — get the first navigable URN under a work/edition.
 - `get_prev_next_urn(urn)` — get neighboring passage URNs for navigation.
 - `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False, page_num=1, text_group=None, work=None, result_format="instances")` — search texts via Scaife search API. Greek queries may be entered as Unicode Greek (for example `μῆνιν`) or Beta Code (for example `mh=nin`).
-- `search_within_text(query, text_urn, ...)` — search within a single Scaife text/edition URN.
+- `search_within_text(query, text_urn, ..., size=10, offset=0)` — search within one Scaife text/edition URN (`size`: 1–500).
 - `get_passage_highlights(query, passage_urn, ...)` — get Scaife token highlight positions for one passage.
 - `get_scaife_library_metadata(urn)` — get Scaife JSON metadata for a library URN.
 - `get_scaife_passage_json(urn)` — get Scaife JSON for a passage URN.

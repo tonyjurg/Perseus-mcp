@@ -1546,7 +1546,10 @@ async def search_within_text(
     size: int = 10,
     offset: int = 0,
 ) -> str:
-    """Search within a single Scaife text/edition URN."""
+    """Search within a single Scaife text/edition URN.
+
+    `size` must be between 1 and 500.
+    """
     normalized_query = _normalize_query_for_search(
         query, language, query_format, preserve_operators
     )
@@ -1557,7 +1560,7 @@ async def search_within_text(
             "kind": _normalize_search_kind(search_kind),
             "type": "reader",
             "text": text_urn,
-            "size": _positive_int(size, "size"),
+            "size": _bounded_list_limit(size, "size"),
             "offset": _non_negative_int(offset, "offset"),
             "fields": "",
         },

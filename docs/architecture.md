@@ -149,7 +149,7 @@ All tools are decorated with `@mcp.tool` and become MCP-exposed functions.
 - `get_first_urn(urn)` → CTS `GetFirstUrn`, with a `GetValidReff` fallback when the upstream response is malformed
 - `get_prev_next_urn(urn)` → CTS `GetPrevNextUrn`, with a `GetValidReff` fallback when the upstream response is malformed
 - `search_perseus(query, language="greek", query_format="auto", author=None, search_kind="form", preserve_operators=False, page_num=1, text_group=None, work=None, result_format="instances")` → Scaife JSON search API with normalized Greek query text, form/lemma search, optional operator preservation, pagination, server-side textgroup/work scoping, and optional author-scope filtering
-- `search_within_text(query, text_urn, ...)` → Scaife reader search API scoped to one text/edition URN
+- `search_within_text(query, text_urn, ..., size=10, offset=0)` → Scaife reader search API scoped to one text/edition URN with a 1–500 result-size limit
 - `get_passage_highlights(query, passage_urn, ...)` → Scaife reader search API with `fields=highlights`
 - `get_scaife_library_metadata(urn)` → Scaife `/library/<urn>/json/`
 - `get_scaife_passage_json(urn)` → Scaife `/library/passage/<urn>/json/`
