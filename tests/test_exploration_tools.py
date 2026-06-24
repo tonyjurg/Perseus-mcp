@@ -18,7 +18,9 @@ from perseus_mcp.server import (
     _passage_plaintext_from_xml,
     _prev_next_xml,
     _remove_readonly_cache_entry,
+    _remove_readonly_cache_entry_legacy,
     _reference_urns_from_xml,
+    _rmtree,
     _valid_references_json,
     _work_resources_from_capabilities,
 )
@@ -304,8 +306,57 @@ def test_remove_readonly_cache_entry_reraises_other_errors(tmp_path) -> None:
         _remove_readonly_cache_entry(
             lambda path: None,
             str(tmp_path),
-            (OSError, error, None),
+            error,
         )
+
+
+def test_remove_readonly_cache_entry_legacy_unwraps_exc_info(monkeypatch) -> None:
+    captured: list[BaseException] = []
+
+    monkeypatch.setattr(
+        server,
+        "_remove_readonly_cache_entry",
+        lambda function, path, error: captured.append(error),
+    )
+    error = PermissionError("permission denied")
+
+    _remove_readonly_cache_entry_legacy(
+        os.unlink,
+        "metadata.xml",
+        (PermissionError, error, None),
+    )
+
+    assert captured == [error]
+
+
+def test_rmtree_uses_onexc_on_python_312_and_later(monkeypatch) -> None:
+    calls: list[tuple[object, dict[str, object]]] = []
+
+    monkeypatch.setattr(server.sys, "version_info", (3, 12))
+    monkeypatch.setattr(
+        server.shutil,
+        "rmtree",
+        lambda path, **kwargs: calls.append((path, kwargs)),
+    )
+
+    _rmtree("cache")
+
+    assert calls == [("cache", {"onexc": _remove_readonly_cache_entry})]
+
+
+def test_rmtree_uses_onerror_on_python_311(monkeypatch) -> None:
+    calls: list[tuple[object, dict[str, object]]] = []
+
+    monkeypatch.setattr(server.sys, "version_info", (3, 11))
+    monkeypatch.setattr(
+        server.shutil,
+        "rmtree",
+        lambda path, **kwargs: calls.append((path, kwargs)),
+    )
+
+    _rmtree("cache")
+
+    assert calls == [("cache", {"onerror": _remove_readonly_cache_entry_legacy})]
 
 
 def test_remove_readonly_cache_entry_removes_protected_directory(tmp_path) -> None:
@@ -318,7 +369,7 @@ def test_remove_readonly_cache_entry_removes_protected_directory(tmp_path) -> No
     _remove_readonly_cache_entry(
         os.unlink,
         str(protected_file),
-        (PermissionError, PermissionError("permission denied"), None),
+        PermissionError("permission denied"),
     )
 
     assert not protected_file.exists()
@@ -350,7 +401,7 @@ def test_remove_readonly_cache_entry_restores_parent_first(
     _remove_readonly_cache_entry(
         removed.append,
         str(protected_file),
-        (PermissionError, PermissionError("permission denied"), None),
+        PermissionError("permission denied"),
     )
 
     assert permission_changes[:2] == [str(protected_dir), str(protected_file)]
