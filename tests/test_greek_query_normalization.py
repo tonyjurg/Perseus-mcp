@@ -5,13 +5,26 @@ import pytest
 from perseus_mcp import server
 from perseus_mcp.server import (
     _normalize_greek_query,
-    _normalize_language,
+    _normalize_search_language,
     _normalize_search_kind,
 )
 
 
 def test_explicit_betacode_search_query_becomes_unicode_greek() -> None:
     assert _normalize_greek_query("mh=nin a)/eide qea/") == "μῆνιν ἄειδε θεά"
+
+
+@pytest.mark.parametrize(
+    ("betacode", "expected"),
+    [
+        ("xa/ris", "χάρις"),
+        ("a)rxh/", "ἀρχή"),
+        ("ci/fos", "ξίφος"),
+        ("*X", "Χ"),
+    ],
+)
+def test_betacode_distinguishes_chi_from_xi(betacode: str, expected: str) -> None:
+    assert _normalize_greek_query(betacode, query_format="betacode") == expected
 
 
 def test_unicode_greek_search_query_is_preserved_and_normalized() -> None:
@@ -27,8 +40,8 @@ def test_query_format_can_force_unicode_for_ambiguous_ascii() -> None:
 
 
 def test_common_language_names_normalize_to_scaife_code() -> None:
-    assert _normalize_language("Ancient Greek") == "gr"
-    assert _normalize_language("latin") == "la"
+    assert _normalize_search_language("Ancient Greek") == "gr"
+    assert _normalize_search_language("latin") == "la"
 
 
 def test_search_kind_allows_form_and_lemma() -> None:

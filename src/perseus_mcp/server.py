@@ -39,17 +39,6 @@ _COMMON_LANGUAGE_CODES = {
     "latin": "lat",
 }
 
-_GREEK_LANGUAGE_CODES = {
-    "gr": "gr",
-    "greek": "gr",
-    "grc": "gr",
-    "ancient greek": "gr",
-    "ancient_greek": "gr",
-    "la": "la",
-    "lat": "la",
-    "latin": "la",
-}
-
 _BETACODE_LETTERS = {
     "a": "α",
     "b": "β",
@@ -65,7 +54,7 @@ _BETACODE_LETTERS = {
     "m": "μ",
     "n": "ν",
     "c": "ξ",
-    "x": "ξ",
+    "x": "χ",
     "o": "ο",
     "p": "π",
     "r": "ρ",
@@ -473,11 +462,6 @@ def _normalize_search_language(language: str | None) -> str:
     )
 
 
-def _normalize_language(language: str | None) -> str:
-    """Normalize a user-facing search language to Scaife's two-letter code."""
-    return _normalize_search_language(language)
-
-
 def _normalize_search_kind(search_kind: str | None) -> str:
     normalized = _normalize_space(search_kind).casefold() or "form"
     if normalized not in {"form", "lemma"}:
@@ -851,8 +835,10 @@ def _list_text_groups_from_capabilities(
     language: str | None = None,
     query: str | None = None,
     limit: int = 100,
+    offset: int = 0,
 ) -> str:
     limit = _bounded_list_limit(limit)
+    offset = _non_negative_int(offset, "offset")
     root = _capabilities_root(capabilities_xml)
     text_groups: list[dict[str, Any]] = []
 
@@ -882,15 +868,20 @@ def _list_text_groups_from_capabilities(
                 ],
             }
         )
-        if len(text_groups) >= limit:
-            break
+
+    page = text_groups[offset : offset + limit]
 
     return json.dumps(
         {
             "query": query,
             "language": _normalize_cts_language(language),
-            "match_count": len(text_groups),
-            "text_groups": text_groups,
+            "total_count": len(text_groups),
+            "offset": offset,
+            "limit": limit,
+            "returned_count": len(page),
+            "match_count": len(page),
+            "has_more": offset + len(page) < len(text_groups),
+            "text_groups": page,
         },
         ensure_ascii=False,
         indent=2,
@@ -914,21 +905,6 @@ def _author_resources_from_capabilities(
         ensure_ascii=False,
         indent=2,
     )
-
-
-def _author_name_matches_from_capabilities(
-    capabilities_xml: str,
-    query: str,
-    language: str | None = None,
-    limit: int = 100,
-) -> str:
-    if not _normalize_space(query):
-        raise ValueError("query must not be empty")
-
-    authors = _matching_author_entries_from_capabilities(
-        capabilities_xml, query, language, names_only=True
-    )
-    return _author_name_matches_response(authors, query, language, limit)
 
 
 def _author_name_matches_response(
@@ -1378,16 +1354,22 @@ async def clear_metadata_cache() -> str:
 
 @mcp.tool
 async def list_text_groups(
-    language: str | None = None, query: str | None = None, limit: int = 100
+    language: str | None = None,
+    query: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> str:
     """List authors/textgroups and their works from CTS capabilities.
 
     Optional `language` accepts values such as "greek", "grc", "latin", or
     "lat". Optional `query` matches author names, textgroup URNs, or work
-    titles. `limit` must be between 1 and 500.
+    titles. `limit` must be between 1 and 500. Use `offset` with `has_more`
+    to page through matching textgroups.
     """
     capabilities_xml = await _get_capabilities_cached()
-    return _list_text_groups_from_capabilities(capabilities_xml, language, query, limit)
+    return _list_text_groups_from_capabilities(
+        capabilities_xml, language, query, limit, offset
+    )
 
 
 @mcp.tool
