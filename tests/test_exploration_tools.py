@@ -363,13 +363,13 @@ def test_valid_references_json_pages_reference_urns() -> None:
     </GetValidReff>"""
 
     result = json.loads(
-        _valid_references_json(references_xml, work, level=1, limit=2, offset=1)
+        _valid_references_json(references_xml, work, level=1, limit=2, offset=2)
     )
 
     assert result["total_count"] == 3
-    assert result["returned_count"] == 2
-    assert result["has_next"] is False
-    assert result["references"] == [f"{work}:1.2", f"{work}:1.3"]
+    assert result["returned_count"] == 1
+    assert result["has_more"] is False
+    assert result["references"] == [f"{work}:1.3"]
 
 
 def test_search_language_normalizes_greek_and_latin_names() -> None:
