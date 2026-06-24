@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 import hashlib
 import json
 import os
@@ -730,13 +731,63 @@ def _merge_author_entries(
 ) -> list[dict[str, Any]]:
     merged: dict[str, dict[str, Any]] = {}
 
+    def merge_resources(
+        existing: list[dict[str, Any]],
+        incoming: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        resources = deepcopy(existing)
+        positions = {
+            resource.get("urn"): index
+            for index, resource in enumerate(resources)
+            if resource.get("urn")
+        }
+        for resource in incoming:
+            resource_urn = resource.get("urn")
+            if not resource_urn or resource_urn not in positions:
+                resources.append(deepcopy(resource))
+                if resource_urn:
+                    positions[resource_urn] = len(resources) - 1
+                continue
+
+            target = resources[positions[resource_urn]]
+            for field, value in resource.items():
+                if field not in target or target[field] in (None, "", []):
+                    target[field] = deepcopy(value)
+        return resources
+
+    def merge_work(
+        existing: dict[str, Any],
+        incoming: dict[str, Any],
+    ) -> None:
+        for field, value in incoming.items():
+            if field in {"titles", "editions", "translations", "resources"}:
+                continue
+            if field not in existing or existing[field] in (None, "", []):
+                existing[field] = deepcopy(value)
+
+        if "titles" in existing or "titles" in incoming:
+            titles = existing.setdefault("titles", [])
+            for title in incoming.get("titles", []):
+                if title not in titles:
+                    titles.append(title)
+
+        for field in ("editions", "translations", "resources"):
+            if field in existing or field in incoming:
+                existing[field] = merge_resources(
+                    existing.get(field, []),
+                    incoming.get(field, []),
+                )
+
     for authors in author_groups:
         for author in authors:
             urn = author.get("urn")
             key = urn or "|".join(author.get("names", [])).casefold()
             if key not in merged:
-                merged[key] = author
-                continue
+                merged[key] = {
+                    **deepcopy(author),
+                    "names": [],
+                    "works": [],
+                }
 
             existing = merged[key]
             existing_names = existing.setdefault("names", [])
@@ -744,16 +795,20 @@ def _merge_author_entries(
                 if name not in existing_names:
                     existing_names.append(name)
 
-            existing_works = existing.setdefault("works", [])
-            existing_work_urns = {
-                work.get("urn") for work in existing_works if work.get("urn")
+            existing_works: list[dict[str, Any]] = existing.setdefault("works", [])
+            existing_work_positions = {
+                work.get("urn"): index
+                for index, work in enumerate(existing_works)
+                if work.get("urn")
             }
             for work in author.get("works", []):
                 work_urn = work.get("urn")
-                if work_urn not in existing_work_urns:
-                    existing_works.append(work)
-                    if work_urn:
-                        existing_work_urns.add(work_urn)
+                if work_urn and work_urn in existing_work_positions:
+                    merge_work(existing_works[existing_work_positions[work_urn]], work)
+                    continue
+                existing_works.append(deepcopy(work))
+                if work_urn:
+                    existing_work_positions[work_urn] = len(existing_works) - 1
             existing["works_count"] = len(existing_works)
 
     return list(merged.values())

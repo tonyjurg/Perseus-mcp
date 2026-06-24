@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 
 import pytest
@@ -105,3 +106,109 @@ def test_merge_author_entries_deduplicates_works_within_incoming_group() -> None
 
     assert merged[0]["works_count"] == 1
     assert merged[0]["works"] == [{"urn": "urn:cts:greekLit:tlg0012.tlg001"}]
+
+
+def test_merge_author_entries_does_not_mutate_inputs() -> None:
+    author = {
+        "urn": "urn:cts:greekLit:tlg0012",
+        "names": ["Homer"],
+        "works": [{"urn": "urn:cts:greekLit:tlg0012.tlg001"}],
+    }
+    original = deepcopy(author)
+
+    merged = _merge_author_entries([author])
+    merged[0]["names"].append("Homerus")
+    merged[0]["works"][0]["titles"] = ["Iliad"]
+
+    assert author == original
+
+
+def test_merge_author_entries_combines_duplicate_work_metadata() -> None:
+    work_urn = "urn:cts:greekLit:tlg0012.tlg001"
+    edition_urn = f"{work_urn}.perseus-grc1"
+    translation_urn = f"{work_urn}.perseus-eng1"
+    merged = _merge_author_entries(
+        [
+            {
+                "urn": "urn:cts:greekLit:tlg0012",
+                "names": ["Homer"],
+                "works": [
+                    {
+                        "urn": work_urn,
+                        "language": "grc",
+                        "titles": ["Iliad"],
+                        "editions": [
+                            {
+                                "urn": edition_urn,
+                                "type": "edition",
+                                "label": "Greek edition",
+                            }
+                        ],
+                        "translations": [],
+                        "resources": [
+                            {
+                                "urn": edition_urn,
+                                "type": "edition",
+                                "label": "Greek edition",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+        [
+            {
+                "urn": "urn:cts:greekLit:tlg0012",
+                "names": ["Homerus"],
+                "works": [
+                    {
+                        "urn": work_urn,
+                        "titles": ["The Iliad"],
+                        "editions": [
+                            {
+                                "urn": edition_urn,
+                                "type": "edition",
+                                "description": "Critical text",
+                            }
+                        ],
+                        "translations": [
+                            {
+                                "urn": translation_urn,
+                                "type": "translation",
+                                "label": "English translation",
+                            }
+                        ],
+                        "resources": [
+                            {
+                                "urn": edition_urn,
+                                "type": "edition",
+                                "description": "Critical text",
+                            },
+                            {
+                                "urn": translation_urn,
+                                "type": "translation",
+                                "label": "English translation",
+                            },
+                        ],
+                    }
+                ],
+            }
+        ],
+    )
+
+    author = merged[0]
+    work = author["works"][0]
+    assert author["names"] == ["Homer", "Homerus"]
+    assert work["language"] == "grc"
+    assert work["titles"] == ["Iliad", "The Iliad"]
+    assert work["editions"][0] == {
+        "urn": edition_urn,
+        "type": "edition",
+        "label": "Greek edition",
+        "description": "Critical text",
+    }
+    assert work["translations"][0]["urn"] == translation_urn
+    assert [resource["urn"] for resource in work["resources"]] == [
+        edition_urn,
+        translation_urn,
+    ]
