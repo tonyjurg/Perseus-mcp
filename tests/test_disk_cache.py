@@ -1,8 +1,16 @@
+import asyncio
 import os
+from pathlib import Path
 
 import pytest
 
-from perseus_mcp.server import _disk_cache_get, _disk_cache_set
+from perseus_mcp import server
+from perseus_mcp.server import (
+    MetadataCacheWarning,
+    _cached_text,
+    _disk_cache_get,
+    _disk_cache_set,
+)
 
 
 def test_disk_cache_set_writes_readable_content(tmp_path, monkeypatch) -> None:
@@ -46,6 +54,45 @@ def test_disk_cache_set_cleans_up_temp_file_on_write_failure(tmp_path, monkeypat
 
     assert not path.exists()
     assert list(path.parent.iterdir()) == []
+
+
+def test_disk_cache_set_preserves_original_error_when_cleanup_fails(
+    tmp_path, monkeypatch
+) -> None:
+    path = tmp_path / "capabilities" / "abc123.xml"
+    path.parent.mkdir(parents=True)
+
+    def failing_replace(source, target) -> None:
+        raise OSError("replace failed")
+
+    def failing_unlink(self, missing_ok=False) -> None:
+        raise OSError("cleanup failed")
+
+    monkeypatch.setattr(server.os, "replace", failing_replace)
+    monkeypatch.setattr(Path, "unlink", failing_unlink)
+
+    with pytest.raises(OSError, match="replace failed"):
+        _disk_cache_set(path, "value")
+
+
+def test_cached_text_returns_upstream_value_when_disk_cache_write_fails(
+    monkeypatch,
+) -> None:
+    async def fetch() -> str:
+        return "upstream value"
+
+    monkeypatch.setattr(server, "_memory_cache_get", lambda name: None)
+    monkeypatch.setattr(server, "_disk_cache_get", lambda path: None)
+
+    def failing_cache_set(path, value) -> None:
+        raise PermissionError("read-only cache")
+
+    monkeypatch.setattr(server, "_disk_cache_set", failing_cache_set)
+
+    with pytest.warns(MetadataCacheWarning, match="read-only cache"):
+        result = asyncio.run(_cached_text("capabilities", {"request": "test"}, fetch))
+
+    assert result == "upstream value"
 
 
 def test_disk_cache_set_is_noop_when_cache_disabled(tmp_path, monkeypatch) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from copy import deepcopy
 import hashlib
 import json
@@ -87,6 +88,10 @@ _HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
 
 class UpstreamRateLimitWarning(UserWarning):
     """Warn that Perseus or Scaife rejected a request because of rate limiting."""
+
+
+class MetadataCacheWarning(UserWarning):
+    """Warn that the optional metadata cache could not be updated."""
 
 
 async def _close_http_client(
@@ -268,8 +273,9 @@ def _disk_cache_set(path: Path, value: str) -> None:
     try:
         tmp_path.write_text(value, encoding="utf-8")
         os.replace(tmp_path, path)
-    except OSError:
-        tmp_path.unlink(missing_ok=True)
+    except (OSError, UnicodeError):
+        with suppress(OSError):
+            tmp_path.unlink(missing_ok=True)
         raise
 
 
@@ -296,7 +302,15 @@ async def _cached_text(
 
     value = await fetcher()
     _memory_cache_set(memory_key, value)
-    _disk_cache_set(path, value)
+    try:
+        _disk_cache_set(path, value)
+    except (OSError, UnicodeError) as exc:
+        warnings.warn(
+            f"Could not update optional metadata cache at {path}: {exc}. "
+            "Returning the upstream response without disk caching.",
+            MetadataCacheWarning,
+            stacklevel=2,
+        )
     return value
 
 

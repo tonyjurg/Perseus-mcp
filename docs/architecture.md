@@ -187,7 +187,9 @@ cache.
 Disk cache updates use a process-qualified temporary sibling followed by
 `os.replace(...)`. Keeping the temporary file on the same volume makes the
 final replacement atomic on supported Windows and POSIX filesystems and avoids
-readers observing partial writes.
+readers observing partial writes. Because the cache is optional, write failures
+emit `MetadataCacheWarning` and the successfully fetched upstream response is
+still returned.
 
 ### Author resource filtering
 
