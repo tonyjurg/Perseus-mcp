@@ -120,7 +120,7 @@ def test_list_text_groups_reports_and_pages_all_matches() -> None:
     assert result["offset"] == 0
     assert result["limit"] == 1
     assert result["returned_count"] == 1
-    assert result["match_count"] == 1
+    assert result["match_count"] == 2
     assert result["has_more"] is True
     assert result["text_groups"][0]["names"] == ["Homer"]
 
@@ -186,7 +186,7 @@ def test_author_name_matches_reports_and_pages_all_matches() -> None:
 
     assert first_page["total_count"] == 3
     assert first_page["returned_count"] == 2
-    assert first_page["match_count"] == 2
+    assert first_page["match_count"] == 3
     assert first_page["offset"] == 0
     assert first_page["limit"] == 2
     assert first_page["has_more"] is True
