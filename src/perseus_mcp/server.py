@@ -996,16 +996,24 @@ def _author_name_matches_response(
     query: str,
     language: str | None = None,
     limit: int = 100,
+    offset: int = 0,
 ) -> str:
     limit = _bounded_list_limit(limit)
-    authors = authors[:limit]
+    offset = _non_negative_int(offset, "offset")
+    total_count = len(authors)
+    authors = authors[offset : offset + limit]
     normalized_query = _normalize_space(query).casefold()
 
     return json.dumps(
         {
             "query": query,
             "language": _normalize_cts_language(language),
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "returned_count": len(authors),
             "match_count": len(authors),
+            "has_more": offset + len(authors) < total_count,
             "authors": [
                 {
                     "urn": author.get("urn"),
@@ -1483,14 +1491,18 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
 
 @mcp.tool
 async def find_author_names(
-    query: str, language: str | None = None, limit: int = 100
+    query: str,
+    language: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> str:
     """Find author/textgroup names by partial name match across Perseus catalogs.
 
     This merges the legacy CTS capabilities inventory with Scaife's library
     catalog, then matches author/textgroup name fields only, not work titles.
     A result can therefore be found when either upstream inventory contains it.
-    `limit` must be between 1 and 500.
+    `limit` must be between 1 and 500. Use `offset` with `has_more` to page
+    through all matching authors.
     Examples:
     - query: "Hom"
     - query: "Plut"
@@ -1498,7 +1510,7 @@ async def find_author_names(
     if not _normalize_space(query):
         raise ValueError("query must not be empty")
     authors = await _resolve_author_entries(query, language, names_only=True)
-    return _author_name_matches_response(authors, query, language, limit)
+    return _author_name_matches_response(authors, query, language, limit, offset)
 
 
 @mcp.tool
