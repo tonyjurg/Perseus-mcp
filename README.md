@@ -93,7 +93,9 @@ across notebooks and MCP clients, set `PERSEUS_MCP_CACHE_DIR` to an absolute
 path such as `/path/to/Perseus-mcp/.cache/perseus-mcp`.
 Disk entries are written to unique sibling temporary files and atomically
 replaced, so multiple local processes can safely share that directory without
-exposing partially written cache files.
+exposing partially written cache files. Disk-cache write failures emit a
+`MetadataCacheWarning` but do not discard a successfully fetched upstream
+response.
 
 ## URN Discovery
 
