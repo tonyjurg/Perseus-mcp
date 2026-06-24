@@ -1072,15 +1072,27 @@ def _work_resources_from_capabilities(
 
 def _passage_plaintext_from_xml(passage_xml: str) -> str:
     root = _safe_xml_fromstring(passage_xml)
-    text_parts: list[str] = []
-    preferred_text_nodes = {"l", "p", "ab", "seg", "quote"}
 
-    for element in root.iter():
-        if _local_name(element.tag) not in preferred_text_nodes:
-            continue
-        text = _element_text(element)
-        if text and text not in text_parts:
-            text_parts.append(text)
+    def outermost_texts(names: set[str]) -> list[str]:
+        text_parts: list[str] = []
+
+        def visit(element: ET.Element) -> None:
+            if _local_name(element.tag) in names:
+                text = _element_text(element)
+                if text:
+                    text_parts.append(text)
+                return
+            for child in element:
+                visit(child)
+
+        visit(root)
+        return text_parts
+
+    text_parts = outermost_texts({"l", "p", "ab"})
+    if not text_parts:
+        text_parts = outermost_texts({"quote"})
+    if not text_parts:
+        text_parts = outermost_texts({"seg"})
 
     if not text_parts:
         for element in root.iter():
