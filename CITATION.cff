@@ -7,8 +7,8 @@ authors:
   - family-names: "Jurg"
     given-names: "Tony"
     orcid: "https://orcid.org/0000-0002-0343-1346"
-doi: "10.5281/zenodo.20708961"
-url: "https://doi.org/10.5281/zenodo.20708961"
+doi: "10.5281/zenodo.20708960"
+url: "https://doi.org/10.5281/zenodo.20708960"
 repository-code: "https://github.com/tonyjurg/Perseus-mcp"
 license: MIT
 abstract: >-
