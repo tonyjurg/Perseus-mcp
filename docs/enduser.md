@@ -49,7 +49,7 @@ uv --directory /full/path/to/Perseus-mcp run perseus-mcp
 
 Replace `/full/path/to/Perseus-mcp` with the absolute path to this repository.
 
-<details>
+<details markdown="1">
 <summary><strong>Cursor configuration</strong></summary>
 
 ### Cursor
@@ -81,7 +81,7 @@ Restart Cursor and confirm that the `perseus` server appears in its MCP tools.
 
 </details>
 
-<details>
+<details markdown="1">
 <summary><strong>Claude Desktop configuration</strong></summary>
 
 ### Claude Desktop
@@ -127,7 +127,7 @@ which uv
 
 </details>
 
-<details>
+<details markdown="1">
 <summary><strong>Other local MCP clients</strong></summary>
 
 ### Other local MCP clients
@@ -148,7 +148,7 @@ location and JSON shape.
 
 </details>
 
-<details>
+<details markdown="1">
 <summary><strong>ChatGPT configuration</strong></summary>
 
 ### ChatGPT
@@ -183,7 +183,7 @@ for the current interface and deployment requirements.
 
 </details>
 
-<details>
+<details markdown="1">
 <summary><strong>OpenRouter notebook workflow</strong></summary>
 
 ### OpenRouter
