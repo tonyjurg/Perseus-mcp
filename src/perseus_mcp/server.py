@@ -1151,7 +1151,7 @@ def _valid_references_json(
             "offset": offset,
             "limit": limit,
             "returned_count": len(page),
-            "has_next": offset + limit < len(references),
+            "has_more": offset + len(page) < len(references),
             "references": page,
         },
         ensure_ascii=False,
