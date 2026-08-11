@@ -13,6 +13,10 @@ from perseus_mcp import server as package_server
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPENDABOT_CONFIG = REPO_ROOT / ".github" / "dependabot.yml"
+CODEQL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "codeql.yml"
+DEPENDENCY_REVIEW_WORKFLOW = (
+    REPO_ROOT / ".github" / "workflows" / "dependency-review.yml"
+)
 ENDUSER_GUIDE = REPO_ROOT / "docs" / "enduser.md"
 PUBLISH_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "publish.yml"
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
@@ -127,6 +131,29 @@ def test_dependabot_tracks_python_and_github_actions_dependencies() -> None:
     assert 'package-ecosystem: "github-actions"' in configuration
     assert configuration.count('interval: "weekly"') == 2
     assert configuration.count('directory: "/"') == 2
+    # Dependabot creates its default labels when needed. Custom labels must
+    # already exist, otherwise every update PR gets a configuration warning.
+    assert "labels:" not in configuration
+
+
+def test_codeql_scans_code_and_workflows_with_quality_queries() -> None:
+    workflow = CODEQL_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "pull_request:" in workflow
+    assert "schedule:" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "language: actions" in workflow
+    assert "language: python" in workflow
+    assert "query_suite: security-and-quality" in workflow
+
+
+def test_dependency_review_checks_every_pull_request() -> None:
+    workflow = DEPENDENCY_REVIEW_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "pull_request:" in workflow
+    assert "paths:" not in workflow
+    assert "actions/dependency-review-action@v4" in workflow
+    assert "fail-on-severity: moderate" in workflow
 
 
 def test_rate_limit_guidance_is_documented() -> None:

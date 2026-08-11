@@ -308,6 +308,20 @@ This focused scan does not replace normal credential hygiene: do not commit
 `.env` files, tokens, private MCP configuration, or notebook outputs containing
 credentials.
 
+### Code and dependency security
+
+`.github/workflows/codeql.yml` analyzes both the Python source and GitHub
+Actions workflows on pushes to `main` and `development`, on pull requests, and
+weekly. Python analysis uses CodeQL's security-and-quality query suite, while
+workflow analysis uses the security-extended suite. The workflow also supports
+manual dispatch for configuration checks.
+
+`.github/workflows/dependency-review.yml` runs on every pull request and fails
+when a changed dependency introduces a known vulnerability of moderate or
+higher severity. Dependabot checks both Python and GitHub Actions dependencies
+weekly. Its default labels are intentionally used so update pull requests do
+not depend on repository-specific labels being pre-created.
+
 ### Release and publication gates
 
 `.github/workflows/release.yml` runs for `v*` tags or manual dispatch. For tag
