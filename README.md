@@ -38,39 +38,50 @@ helpers return locally shaped JSON or readable text.
 
 ## Greek Search Input
 
-`search_perseus` normalizes Greek search terms before sending them to Scaife.
-You can pass Unicode Greek directly, or use Beta Code such as `mh=nin a)/eide`.
-Search queries must contain at least one non-whitespace character.
-The default `query_format="auto"` detects explicit Beta Code marks like `=`, `/`, `(`, `)`, and `*`, and also treats short unaccented Greek-looking queries such as `logos` as Beta Code.
-If an ASCII query is ambiguous, set `query_format="betacode"` to force conversion or `query_format="unicode"` to preserve it exactly.
-Search queries are normalized to composed Greek Unicode (NFC), matching sampled Perseus Greek text.
-The tool uses Scaife's JSON search route and returns the JSON response as text.
-The `language` argument accepts recognized Greek aliases (`greek`, `grc`, `gr`)
-or Latin aliases (`latin`, `lat`, `la`); blank input defaults to Greek and
-unrecognized values raise an error. It controls query normalization and is not
-currently sent to Scaife as a corpus language filter.
+`search_perseus` normalizes search terms before sending them to Scaife's JSON
+search route. Queries must contain at least one non-whitespace character. The
+tool returns Scaife's JSON response as text.
+
+| Input | Accepted values | Behavior |
+| --- | --- | --- |
+| `query` | Unicode Greek, such as `μῆνιν`, or Beta Code, such as `mh=nin a)/eide` | Normalized to composed Greek Unicode (NFC) before searching. |
+| `query_format` | `"auto"` (default), `"betacode"`, or `"unicode"` | `auto` recognizes Beta Code marks such as `=`, `/`, `(`, `)`, and `*`, and short unaccented Greek-looking terms such as `logos`. Use an explicit format for ambiguous ASCII input. |
+| `language` | Greek aliases: `greek`, `grc`, `gr`; Latin aliases: `latin`, `lat`, `la` | Controls query normalization, not Scaife corpus filtering. Blank input defaults to Greek; unrecognized values raise an error. |
+| `search_kind` | `"form"` (default) or `"lemma"` | Searches inflected forms or dictionary lemmas. |
+| `preserve_operators` | `False` (default) or `True` | Set to `True` for quoted phrases or operators such as `-`, `\|`, `*`, and `~`, preventing Beta Code detection from consuming them. |
+| `author` | CTS author/textgroup name or URN | A unique match becomes a server-side `text_group` filter. Ambiguous matches use local CTS URN-prefix filtering on the returned page. |
+| `text_group`, `work` | Scaife scope URNs | Apply server-side scope filters directly. |
+| `page_num` | Page number | Selects the result page. |
+
+Operator-query examples:
+
+```python
+search_perseus(
+    '"μῆνιν ἄειδε"',
+    query_format="unicode",
+    preserve_operators=True,
+)
+
+search_perseus(
+    "μῆνιν -ἄειδε",
+    query_format="unicode",
+    preserve_operators=True,
+)
+
+search_perseus(
+    "λόγος | ἀνήρ",
+    search_kind="lemma",
+    query_format="unicode",
+    preserve_operators=True,
+)
+```
+
 For inventory discovery, `list_text_groups`, `find_author_names`,
-`get_author_resources`, and `get_work_resources` accept `language="greek"` or
-`language="latin"` (and common codes such as `grc` or `lat`) as an actual work
-language filter. `find_author_names` merges the legacy CTS inventory with the
-Scaife library catalog, so Scaife-only authors such as Philo Judaeus remain
+`get_author_resources`, and `get_work_resources` treat `language` as an actual
+work-language filter. `find_author_names` merges the legacy CTS inventory with
+the Scaife library catalog, so Scaife-only authors such as Philo Judaeus remain
 discoverable. Passage and navigation tools use CTS URNs, whose
 `greekLit`/`latinLit` namespace and edition identifier already select the text.
-Pass `author` to resolve a CTS author/textgroup name or URN. When it resolves
-to exactly one textgroup, Scaife receives a server-side `text_group` filter;
-ambiguous matches fall back to local CTS URN-prefix filtering of the current
-result page.
-Use `search_kind="lemma"` for lemma search; the default `search_kind="form"`
-keeps existing form-search behavior. For Scaife operator queries such as
-quoted phrases, `-`, `|`, `*`, or `~`, set `preserve_operators=True` so Beta
-Code auto-detection does not consume operator characters. For example:
-`search_perseus('"μῆνιν ἄειδε"', query_format="unicode", preserve_operators=True)`,
-`search_perseus("μῆνιν -ἄειδε", query_format="unicode", preserve_operators=True)`,
-or `search_perseus("λόγος | ἀνήρ", search_kind="lemma", query_format="unicode", preserve_operators=True)`.
-Use `page_num` for pagination and pass `text_group` or `work` to use Scaife's
-server-side scope filters. When `author` resolves to exactly one CTS textgroup,
-`search_perseus` sends that textgroup to Scaife instead of filtering only the
-returned page locally.
 
 ## Local Metadata Cache
 
