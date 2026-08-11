@@ -1,4 +1,5 @@
 import asyncio
+from typing import ClassVar
 
 import httpx
 import pytest
@@ -119,7 +120,7 @@ def test_get_reuses_shared_client_across_calls(monkeypatch) -> None:
     class FakeResponse:
         status_code = 200
         text = "ok"
-        headers = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -151,7 +152,7 @@ def test_get_raises_for_non_2xx_status(monkeypatch) -> None:
     class FakeResponse:
         status_code = 500
         text = "error body"
-        headers = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             raise httpx.HTTPStatusError(
@@ -196,8 +197,7 @@ def test_get_warns_and_preserves_429_error(monkeypatch) -> None:
     with pytest.warns(
         server.UpstreamRateLimitWarning,
         match=r"HTTP 429.*Retry after 30 seconds.*not retried automatically",
-    ):
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            asyncio.run(server._get(str(request.url)))
+    ), pytest.raises(httpx.HTTPStatusError) as exc_info:
+        asyncio.run(server._get(str(request.url)))
 
     assert exc_info.value.response.status_code == 429

@@ -9,22 +9,21 @@ from perseus_mcp import server
 from perseus_mcp.server import (
     _author_name_matches_response,
     _author_resources_from_capabilities,
-    _first_urn_xml,
     _filter_scaife_search_response_by_author,
+    _first_urn_xml,
     _list_text_groups_from_capabilities,
     _matching_author_entries_from_capabilities,
     _matching_author_entries_from_scaife_catalog,
     _normalize_search_language,
     _passage_plaintext_from_xml,
     _prev_next_xml,
+    _reference_urns_from_xml,
     _remove_readonly_cache_entry,
     _remove_readonly_cache_entry_legacy,
-    _reference_urns_from_xml,
     _rmtree,
     _valid_references_json,
     _work_resources_from_capabilities,
 )
-
 
 CAPABILITIES_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <GetCapabilities xmlns="http://chs.harvard.edu/xmlns/cts">

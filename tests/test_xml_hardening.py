@@ -8,7 +8,6 @@ from perseus_mcp.server import (
     _reference_urns_from_xml,
 )
 
-
 # A "billion laughs" style entity-expansion payload. A handful of nested
 # entity definitions like this can expand to an enormous in-memory string;
 # defusedxml refuses to expand any custom entities at all rather than trying

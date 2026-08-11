@@ -11,7 +11,6 @@ from perseus_mcp.server import (
     _valid_references_json,
 )
 
-
 # --- _bounded_list_limit -----------------------------------------------
 
 
