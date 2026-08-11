@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.metadata
 import importlib.util
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -151,7 +152,11 @@ def test_dependency_review_checks_every_pull_request() -> None:
 
     assert "pull_request:" in workflow
     assert "paths:" not in workflow
-    assert "actions/dependency-review-action@v4" in workflow
+    assert re.search(
+        r"^\s*-\s+uses:\s+actions/dependency-review-action@v[1-9]\d*\s*$",
+        workflow,
+        flags=re.MULTILINE,
+    )
     assert "fail-on-severity: moderate" in workflow
 
 
