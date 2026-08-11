@@ -7,10 +7,8 @@ import re
 import tomllib
 from pathlib import Path
 
-from perseus_mcp import (
-    __version__ as package_version,
-    server as package_server,
-)
+from perseus_mcp import __version__ as package_version
+from perseus_mcp import server as package_server
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
