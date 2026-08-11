@@ -5,8 +5,8 @@ import pytest
 from perseus_mcp import server
 from perseus_mcp.server import (
     _normalize_greek_query,
-    _normalize_search_language,
     _normalize_search_kind,
+    _normalize_search_language,
 )
 
 

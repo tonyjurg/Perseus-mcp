@@ -1,10 +1,12 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 
 import pytest
 
-from perseus_mcp.server import _author_resources_from_capabilities, _merge_author_entries
-
+from perseus_mcp.server import (
+    _author_resources_from_capabilities,
+    _merge_author_entries,
+)
 
 CAPABILITIES_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <GetCapabilities xmlns="http://chs.harvard.edu/xmlns/cts">

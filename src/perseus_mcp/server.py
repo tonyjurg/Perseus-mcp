@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
-from copy import deepcopy
 import hashlib
 import json
 import os
@@ -14,6 +12,8 @@ import time
 import unicodedata
 import warnings
 import xml.etree.ElementTree as ET
+from contextlib import suppress
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -1230,8 +1230,7 @@ def _urn_matches_scope(urn: str, scope_urns: list[str]) -> bool:
     for scope_urn in scope_urns:
         if (
             urn == scope_urn
-            or urn.startswith(f"{scope_urn}.")
-            or urn.startswith(f"{scope_urn}:")
+            or urn.startswith((f"{scope_urn}.", f"{scope_urn}:"))
         ):
             return True
     return False

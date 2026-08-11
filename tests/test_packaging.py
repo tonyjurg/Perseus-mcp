@@ -9,7 +9,6 @@ from pathlib import Path
 import perseus_mcp
 from perseus_mcp import server as package_server
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPENDABOT_CONFIG = REPO_ROOT / ".github" / "dependabot.yml"
@@ -48,7 +47,7 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
     assert configuration["tool"]["setuptools"]["packages"]["find"]["where"] == [
         "src"
     ]
-    assert {"build>=1.2", "twine>=6.0"} <= set(
+    assert {"build>=1.2", "ruff>=0.16.2,<0.17", "twine>=6.0"} <= set(
         configuration["project"]["optional-dependencies"]["dev"]
     )
 
