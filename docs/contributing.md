@@ -65,31 +65,6 @@ uv run --extra dev pytest
 uv run --extra dev ruff check src tests
 ```
 
-## Build Release Artifacts
-
-Build and validate the wheel and source distribution before publishing:
-
-```bash
-python -m build
-python -m twine check dist/*
-```
-
-Test the wheel in a clean virtual environment. Upload to TestPyPI before the
-production PyPI index. Every release needs a new version in `pyproject.toml`;
-published files cannot be replaced under the same version.
-
-## Automated Releases
-
-Production releases use GitHub Actions and PyPI trusted publishing. Push a tag
-that exactly matches the package version with a leading `v`, such as `v1.0.2`
-for `project.version = "1.0.2"`.
-
-The release workflow builds and validates the wheel and source archive, creates
-a GitHub release containing those artifacts, and dispatches the separate
-PyPI-publishing workflow. The publishing job runs in the GitHub environment
-named `pypi` and authenticates to PyPI through OIDC rather than a stored API
-token.
-
 Keep pull requests narrowly scoped. A good pull request usually contains:
 
 - a clear description of the change;
@@ -98,17 +73,13 @@ Keep pull requests narrowly scoped. A good pull request usually contains:
 - notes about any upstream Perseus or Scaife behavior that influenced the
   implementation.
 
-## Documentation Changes
-
-Documentation-only changes under `docs/` publish to GitHub Pages without
-running the Python test workflow. If a documentation change also updates code,
-configuration, examples, or tests, the test workflow still runs.
 
 ## Security and Credentials
 
 Do not commit API keys, local `.env` files, notebook secrets, or private client
 configuration. The `.env.example` file documents expected environment variables
 without storing real credentials.
+
 CI blocks pull requests and direct pushes to `main` or `development` that
 contain an OpenRouter key-like token matching
 `sk-or-v1-[A-Za-z0-9_-]{20,}` in tracked files. Feature branches run the same
