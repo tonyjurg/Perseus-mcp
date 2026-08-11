@@ -8,6 +8,7 @@ on:
   pull_request:
   schedule:
     - cron: "34 3 * * 1"
+  workflow_dispatch:
 
 permissions:
   actions: read
@@ -16,8 +17,16 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze Python
+    name: Analyze ${{ matrix.language }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            query_suite: security-extended
+          - language: python
+            query_suite: security-and-quality
 
     steps:
       - uses: actions/checkout@v7
@@ -25,11 +34,11 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: python
+          languages: ${{ matrix.language }}
           build-mode: none
-          queries: +security-extended
+          queries: +${{ matrix.query_suite }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:python"
+          category: "/language:${{ matrix.language }}"
