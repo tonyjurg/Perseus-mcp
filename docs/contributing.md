@@ -90,13 +90,6 @@ PyPI-publishing workflow. The publishing job runs in the GitHub environment
 named `pypi` and authenticates to PyPI through OIDC rather than a stored API
 token.
 
-The PyPI trusted publisher must be configured for:
-
-- owner: `tonyjurg`;
-- repository: `Perseus-mcp`;
-- workflow: `publish.yml`;
-- environment: `pypi`.
-
 Keep pull requests narrowly scoped. A good pull request usually contains:
 
 - a clear description of the change;
