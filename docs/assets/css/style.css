@@ -89,6 +89,28 @@ a:hover {
   padding: 3rem 1.25rem 5rem;
 }
 
+.site-footer {
+  border-top: 1px solid var(--line);
+  margin: 0 auto;
+  max-width: 920px;
+  padding: 1.25rem;
+}
+
+.project-credit {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.65rem;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.project-credit img {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
 .hero {
   align-items: flex-start;
   border-bottom: 1px solid var(--line);
