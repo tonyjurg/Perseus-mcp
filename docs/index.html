@@ -1,35 +1,13 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Perseus MCP Documentation</title>
-    <meta name="description" content="Guides and architecture notes for the Perseus MCP server.">
-    <meta name="google-site-verification" content="P2fChlUk8978ugv3-hcITlCr_R8T1WltycEABFvWiP4" />
-    <link rel="alternate" type="text/plain" href="llms.txt" title="Perseus MCP documentation for LLMs">
-    <link rel="stylesheet" href="assets/css/style.css">
-  </head>
-  <body>
-    <header class="site-header">
-      <nav class="site-nav" aria-label="Main navigation">
-        <a class="site-title" href="./">
-          <img src="assets/img/perseus-mcp-logo.png" alt="" class="site-logo">
-          <span>Perseus MCP</span>
-        </a>
-        <div class="nav-links">
-          <a href="enduser/">End-User Guide</a>
-          <a href="architecture/">Architecture</a>
-          <a href="notebooks/">Notebooks</a>
-          <a href="contributing/">Contributing</a>
-          <a href="license/">License</a>
-          <a href="https://github.com/tonyjurg/Perseus-mcp">GitHub</a>
-        </div>
-      </nav>
-    </header>
+---
+layout: default
+title: Documentation
+description: Guides and architecture notes for the Perseus MCP server.
+permalink: /
+---
 
-    <main class="page">
       <section class="hero">
-        <img src="assets/img/perseus-mcp-logo.png" alt="Perseus MCP logo" class="hero-logo">
+        <img src="{{ '/assets/img/perseus-mcp-logo.png' | relative_url }}" alt="Perseus MCP logo" class="hero-logo">
+        <h1>Perseus MCP Documentation</h1>
         <p class="lead">
           Perseus MCP is a local FastMCP server that gives MCP-capable clients
           structured tools for Greek and Latin text research against Perseus CTS and
@@ -38,7 +16,7 @@
       </section>
 
       <section class="doc-grid" aria-label="Documentation guides">
-        <a class="doc-card" href="enduser/">
+        <a class="doc-card" href="{{ '/enduser/' | relative_url }}">
           <h2>End-User Guide</h2>
           <p>
             Install the server, connect it to an MCP client, discover URNs,
@@ -46,7 +24,7 @@
           </p>
         </a>
 
-        <a class="doc-card" href="architecture/">
+        <a class="doc-card" href="{{ '/architecture/' | relative_url }}">
           <h2>Architecture</h2>
           <p>
             Understand the FastMCP host, upstream services, request helpers,
@@ -54,7 +32,7 @@
           </p>
         </a>
 
-        <a class="doc-card" href="notebooks/">
+        <a class="doc-card" href="{{ '/notebooks/' | relative_url }}">
           <h2>Notebooks</h2>
           <p>
             Browse example notebooks for CTS workflows, MCP tool calls, Greek
@@ -62,7 +40,7 @@
           </p>
         </a>
 
-        <a class="doc-card" href="contributing/">
+        <a class="doc-card" href="{{ '/contributing/' | relative_url }}">
           <h2>Contributing</h2>
           <p>
             Report bugs, request features, contribute focused pull requests,
@@ -70,7 +48,7 @@
           </p>
         </a>
 
-        <a class="doc-card" href="license/">
+        <a class="doc-card" href="{{ '/license/' | relative_url }}">
           <h2>License</h2>
           <p>
             Review the MIT License terms for using, modifying, and distributing
@@ -104,12 +82,3 @@
           all code and documentation changes.
         </p>
       </section>
-    </main>
-    <footer class="site-footer">
-      <a class="project-credit" href="https://github.com/TJ-engineering" target="_blank" rel="noopener noreferrer">
-        <img src="assets/tje-black.png" width="40" height="40" alt="">
-        <span>a TJ Engineering project</span>
-      </a>
-    </footer>
-  </body>
-</html>

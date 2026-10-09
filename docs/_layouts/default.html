@@ -3,8 +3,6 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
-    <meta name="description" content="{{ page.description | default: site.description }}">
     <meta name="google-site-verification" content="P2fChlUk8978ugv3-hcITlCr_R8T1WltycEABFvWiP4" />
     <link rel="alternate" type="text/plain" href="{{ '/llms.txt' | relative_url }}" title="Perseus MCP documentation for LLMs">
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
@@ -14,7 +12,7 @@
     <header class="site-header">
       <nav class="site-nav" aria-label="Main navigation">
         <a class="site-title" href="{{ '/' | relative_url }}">
-          <img src="{{ '/assets/img/perseus-mcp-logo.png' | relative_url }}" alt="" class="site-logo">
+          <img src="{{ '/assets/img/perseus-mcp-logo_small.png' | relative_url }}" width="32" height="32" alt="" class="site-logo">
           <span>Perseus MCP</span>
         </a>
         <div class="nav-links">
