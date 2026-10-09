@@ -354,7 +354,11 @@ release tag.
 `.github/workflows/pages.yml` builds `docs/` with Jekyll and deploys the
 generated artifact to GitHub Pages after documentation changes reach `main` or
 `master`. This Pages site is intended primarily for end users; development and
-test-strategy documentation lives in this repository README.
+test-strategy documentation lives in this repository README. Pull requests that
+change the documentation or Pages workflow also build the site for validation,
+without deploying it. Preview the generated site rather than opening
+`docs/index.html` directly: the homepage now shares the Jekyll layout used by
+the other pages.
 
 ### Interpreting failures
 
