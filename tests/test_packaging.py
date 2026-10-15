@@ -56,9 +56,13 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
     assert configuration["tool"]["setuptools"]["packages"]["find"]["where"] == [
         "src"
     ]
-    assert {"build>=1.2", "ruff>=0.16.2,<0.17", "twine>=6.0"} <= set(
-        configuration["project"]["optional-dependencies"]["dev"]
-    )
+    # Version bounds belong in pyproject.toml so dependency updates do not
+    # require duplicating the same change in this packaging contract test.
+    dev_dependency_names = {
+        re.split(r"[\s\[<>=!~;@]", dependency, maxsplit=1)[0].lower()
+        for dependency in configuration["project"]["optional-dependencies"]["dev"]
+    }
+    assert {"build", "ruff", "twine"} <= dev_dependency_names
 
 
 def test_core_dependencies_are_actually_used_by_the_package() -> None:
