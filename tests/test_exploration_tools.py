@@ -527,7 +527,7 @@ def test_search_perseus_uses_server_side_text_group_for_single_author(
 ) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": [], "total_count": 0}'
 
@@ -555,7 +555,7 @@ def test_search_perseus_uses_server_side_text_group_for_single_author(
 def test_search_perseus_resolves_philo_from_scaife_catalog(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": [], "total_count": 0}'
 

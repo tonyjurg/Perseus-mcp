@@ -58,7 +58,7 @@ def test_scaife_passage_text_url_encodes_whitespace() -> None:
 def test_get_scaife_passage_json_requests_encoded_url(monkeypatch) -> None:
     captured: dict[str, str] = {}
 
-    async def fake_get(url: str, params=None, timeout: float = 20.0) -> str:
+    async def fake_get(url: str, params=None, timeout: float = 20.0, **kwargs) -> str:
         captured["url"] = url
         return "{}"
 

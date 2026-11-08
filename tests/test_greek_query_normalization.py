@@ -79,7 +79,7 @@ def test_search_tools_reject_blank_queries(tool_call, scope_argument) -> None:
 def test_search_perseus_uses_scaife_json_search_route(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": []}'
 
@@ -103,7 +103,7 @@ def test_search_perseus_uses_scaife_json_search_route(monkeypatch) -> None:
 def test_search_perseus_accepts_page_and_scaife_scope_parameters(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": []}'
 
@@ -136,7 +136,7 @@ def test_search_perseus_accepts_page_and_scaife_scope_parameters(monkeypatch) ->
 def test_search_within_text_uses_reader_search(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": []}'
 
@@ -169,7 +169,7 @@ def test_search_within_text_uses_reader_search(monkeypatch) -> None:
 def test_get_passage_highlights_uses_reader_highlight_search(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": []}'
 
@@ -197,7 +197,7 @@ def test_get_passage_highlights_uses_reader_highlight_search(monkeypatch) -> Non
 def test_search_perseus_can_use_lemma_search_kind(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": []}'
 
@@ -225,7 +225,7 @@ def test_search_perseus_can_use_lemma_search_kind(monkeypatch) -> None:
 def test_search_perseus_can_preserve_operator_query(monkeypatch) -> None:
     request: dict[str, object] = {}
 
-    async def fake_get(url, params=None, timeout=20.0):
+    async def fake_get(url, params=None, timeout=20.0, **kwargs):
         request.update(url=url, params=params, timeout=timeout)
         return '{"results": []}'
 
