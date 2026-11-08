@@ -56,7 +56,7 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
     assert configuration["tool"]["setuptools"]["packages"]["find"]["where"] == [
         "src"
     ]
-    assert {"build>=1.2", "ruff>=0.16.2,<0.17", "twine>=6.0"} <= set(
+    assert {"build>=1.2", "ruff>=0.16.2,<0.18", "twine>=6.0"} <= set(
         configuration["project"]["optional-dependencies"]["dev"]
     )
 

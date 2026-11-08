@@ -414,6 +414,11 @@ Close the process holding the directory and retry `clear_metadata_cache()`.
 
 ## Troubleshooting
 
+Upstream access challenges return an MCP tool error with code `UPSTREAM_CHALLENGE`;
+they are never search results and are not retried automatically. Invalid response
+formats use `INVALID_PAYLOAD`, and recognised CTS errors use `INVALID_URN` or
+`UPSTREAM_CTS_ERROR`. Invalid metadata cache entries are discarded before refetching.
+
 | Problem | What to check |
 | --- | --- |
 | Server does not appear | Validate the JSON, use an absolute project path, and restart the client completely |

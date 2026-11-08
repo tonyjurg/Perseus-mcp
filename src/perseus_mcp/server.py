@@ -12,8 +12,10 @@ import time
 import unicodedata
 import warnings
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from contextlib import suppress
 from copy import deepcopy
+from functools import partial, wraps
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -22,8 +24,33 @@ import httpx
 from defusedxml.common import DefusedXmlException
 from defusedxml.ElementTree import fromstring as _safe_xml_fromstring
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
+
+from .upstream import (
+    UpstreamFailure,
+    reject_challenge,
+    validate_catalogue,
+    validate_cts,
+    validate_metadata,
+    validate_passage_json,
+    validate_search,
+    validate_text,
+)
 
 mcp = FastMCP("perseus")
+
+
+def _upstream_tool(function):
+    @wraps(function)
+    async def wrapped(*args, **kwargs):
+        try:
+            return await function(*args, **kwargs)
+        except UpstreamFailure as exc:
+            raise ToolError(exc.as_json()) from None
+
+    mcp.tool(wrapped)
+    return wrapped
+
 
 CTS_BASE = "https://www.perseus.tufts.edu/hopper/CTS"
 SCAIFE_SEARCH = "https://scaife.perseus.org/search/json/"
@@ -159,9 +186,16 @@ async def aclose_http_client() -> None:
         _HTTP_CLIENT_LOOP = None
 
 
-async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 20.0) -> str:
+async def _get(
+    url: str,
+    params: dict[str, Any] | None = None,
+    timeout: float = 20.0,
+    *,
+    validator: Callable[[str], None] = validate_text,
+) -> str:
     client = await _shared_client()
     response = await client.get(url, params=params, timeout=timeout)
+    reject_challenge(response.text, response.status_code)
     if response.status_code == 429:
         retry_after = response.headers.get("Retry-After")
         retry_guidance = (
@@ -176,6 +210,11 @@ async def _get(url: str, params: dict[str, Any] | None = None, timeout: float = 
             stacklevel=2,
         )
     response.raise_for_status()
+    try:
+        validator(response.text)
+    except UpstreamFailure as exc:
+        exc.status = response.status_code
+        raise
     return response.text
 
 
@@ -183,7 +222,7 @@ async def _cts_request(request: str, urn: str | None = None, **extra_params: Any
     params: dict[str, Any] = {"request": request, **extra_params}
     if urn:
         params["urn"] = urn
-    return await _get(CTS_BASE, params=params)
+    return await _get(CTS_BASE, params=params, validator=partial(validate_cts, request=request))
 
 
 def _cache_enabled() -> bool:
@@ -286,6 +325,7 @@ async def _cached_text(
     *,
     extension: str = "xml",
     refresh: bool = False,
+    validator: Callable[[str], None] = validate_text,
 ) -> str:
     key = _cache_key(key_parts)
     memory_key = f"{namespace}:{key}"
@@ -293,14 +333,26 @@ async def _cached_text(
 
     if not refresh:
         cached = _memory_cache_get(memory_key)
+        if cached is None:
+            cached = _disk_cache_get(path)
         if cached is not None:
-            return cached
-        cached = _disk_cache_get(path)
-        if cached is not None:
-            _memory_cache_set(memory_key, cached)
-            return cached
+            try:
+                validator(cached)
+            except UpstreamFailure as exc:
+                _MEMORY_CACHE.pop(memory_key, None)
+                with suppress(OSError):
+                    path.unlink(missing_ok=True)
+                warnings.warn(
+                    f"Ignoring invalid {namespace} cache entry ({exc.code}).",
+                    MetadataCacheWarning,
+                    stacklevel=2,
+                )
+            else:
+                _memory_cache_set(memory_key, cached)
+                return cached
 
     value = await fetcher()
+    validator(value)
     _memory_cache_set(memory_key, value)
     try:
         _disk_cache_set(path, value)
@@ -320,6 +372,7 @@ async def _get_capabilities_cached(refresh: bool = False) -> str:
         {"request": "GetCapabilities", "base": CTS_BASE},
         lambda: _cts_request("GetCapabilities"),
         refresh=refresh,
+        validator=partial(validate_cts, request="GetCapabilities"),
     )
 
 
@@ -327,9 +380,10 @@ async def _get_scaife_library_catalog_cached(refresh: bool = False) -> str:
     return await _cached_text(
         "scaife_library",
         {"url": SCAIFE_LIBRARY_CATALOG},
-        lambda: _get(SCAIFE_LIBRARY_CATALOG),
+        lambda: _get(SCAIFE_LIBRARY_CATALOG, validator=validate_catalogue),
         extension="json",
         refresh=refresh,
+        validator=validate_catalogue,
     )
 
 
@@ -344,6 +398,7 @@ async def _get_valid_references_cached(
         {"request": "GetValidReff", "base": CTS_BASE, "urn": urn, **params},
         lambda: _cts_request("GetValidReff", urn=urn, **params),
         refresh=refresh,
+        validator=partial(validate_cts, request="GetValidReff"),
     )
 
 
@@ -1307,6 +1362,7 @@ def _filter_scaife_search_response_by_author(
     author: str,
     authors: list[dict[str, Any]],
 ) -> str:
+    validate_search(response_text)
     data = json.loads(response_text)
     scope_urns = _urn_scope_values_from_author_entries(authors)
 
@@ -1346,22 +1402,10 @@ def _filter_scaife_search_response_by_author(
             indent=2,
         )
 
-    return json.dumps(
-        {
-            "results": [],
-            "author_scope": {
-                "query": author,
-                "match_count": len(authors),
-                "urns": scope_urns,
-                "note": "Scaife returned an unexpected JSON shape; no results could be filtered.",
-            },
-        },
-        ensure_ascii=False,
-        indent=2,
-    )
+    raise UpstreamFailure("INVALID_PAYLOAD", "The upstream search response has an unexpected format.")
 
 
-@mcp.tool
+@_upstream_tool
 async def get_passage(urn: str) -> str:
     """Get the text of a specific passage using a CTS URN.
 
@@ -1372,20 +1416,20 @@ async def get_passage(urn: str) -> str:
     return await _cts_request("GetPassage", urn=urn)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_passage_plus(urn: str) -> str:
     """Get passage text plus surrounding metadata/context for a CTS URN."""
     return await _cts_request("GetPassagePlus", urn=urn)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_passage_plaintext(urn: str) -> str:
     """Get a passage as plain readable text instead of raw CTS XML."""
     passage_xml = await _cts_request("GetPassage", urn=urn)
     return _passage_plaintext_from_xml(passage_xml)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_valid_references(urn: str, level: int | None = None) -> str:
     """Get valid citations/references for a work, useful for navigation.
 
@@ -1394,7 +1438,7 @@ async def get_valid_references(urn: str, level: int | None = None) -> str:
     return await _get_valid_references_cached(urn, level)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_valid_references_json(
     urn: str, level: int | None = None, limit: int = 100, offset: int = 0
 ) -> str:
@@ -1406,7 +1450,7 @@ async def get_valid_references_json(
     return _valid_references_json(references_xml, urn, level, limit, offset)
 
 
-@mcp.tool
+@_upstream_tool
 async def count_valid_references(urn: str, level: int | None = None) -> str:
     """Count valid citation references without returning the full reference list."""
     references_xml = await _get_valid_references_cached(urn, level)
@@ -1418,19 +1462,19 @@ async def count_valid_references(urn: str, level: int | None = None) -> str:
     )
 
 
-@mcp.tool
+@_upstream_tool
 async def get_capabilities() -> str:
     """Get the list of available texts and editions from Perseus CTS."""
     return await _get_capabilities_cached()
 
 
-@mcp.tool
+@_upstream_tool
 async def get_cache_status() -> str:
     """Get local metadata cache status."""
     return _cache_status()
 
 
-@mcp.tool
+@_upstream_tool
 async def refresh_metadata_cache() -> str:
     """Refresh cached CTS and Scaife library metadata."""
     capabilities_xml, scaife_catalog_json = await asyncio.gather(
@@ -1449,13 +1493,13 @@ async def refresh_metadata_cache() -> str:
     )
 
 
-@mcp.tool
+@_upstream_tool
 async def clear_metadata_cache() -> str:
     """Clear local metadata cache files and in-memory cache entries."""
     return _clear_cache()
 
 
-@mcp.tool
+@_upstream_tool
 async def list_text_groups(
     language: str | None = None,
     query: str | None = None,
@@ -1475,7 +1519,7 @@ async def list_text_groups(
     )
 
 
-@mcp.tool
+@_upstream_tool
 async def get_author_resources(author: str, language: str | None = None) -> str:
     """List CTS works/editions/translations for an author name or textgroup URN.
 
@@ -1488,7 +1532,7 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
     return _author_resources_from_capabilities(capabilities_xml, author, language)
 
 
-@mcp.tool
+@_upstream_tool
 async def find_author_names(
     query: str,
     language: str | None = None,
@@ -1512,7 +1556,7 @@ async def find_author_names(
     return _author_name_matches_response(authors, query, language, limit, offset)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_work_resources(
     urn_or_title: str, language: str | None = None
 ) -> str:
@@ -1531,16 +1575,21 @@ async def get_work_resources(
     )
 
 
-@mcp.tool
+@_upstream_tool
 async def get_label(urn: str) -> str:
     """Get human-readable labels/metadata for a CTS URN (work or edition)."""
     return await _cts_request("GetLabel", urn=urn)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_first_urn(urn: str) -> str:
     """Get the first available reference URN for a work/edition URN."""
-    response = await _cts_request("GetFirstUrn", urn=urn)
+    try:
+        response = await _cts_request("GetFirstUrn", urn=urn)
+    except UpstreamFailure as exc:
+        if exc.code != "UPSTREAM_CTS_ERROR":
+            raise
+        response = ""
     if _is_xml_response(response, "GetFirstUrn"):
         return response
 
@@ -1548,10 +1597,15 @@ async def get_first_urn(urn: str) -> str:
     return _first_urn_xml(urn, _reference_urns_from_xml(references_xml))
 
 
-@mcp.tool
+@_upstream_tool
 async def get_prev_next_urn(urn: str) -> str:
     """Get previous and next URNs for a passage URN."""
-    response = await _cts_request("GetPrevNextUrn", urn=urn)
+    try:
+        response = await _cts_request("GetPrevNextUrn", urn=urn)
+    except UpstreamFailure as exc:
+        if exc.code != "UPSTREAM_CTS_ERROR":
+            raise
+        response = ""
     if _is_xml_response(response, "GetPrevNextUrn"):
         return response
 
@@ -1562,7 +1616,7 @@ async def get_prev_next_urn(urn: str) -> str:
     return _prev_next_xml(urn, _reference_urns_from_xml(references_xml))
 
 
-@mcp.tool
+@_upstream_tool
 async def search_perseus(
     query: str,
     language: str = "greek",
@@ -1630,6 +1684,7 @@ async def search_perseus(
     response_text = await _get(
         SCAIFE_SEARCH,
         params=params,
+        validator=validate_search,
     )
     if author is None or not _normalize_space(author):
         return response_text
@@ -1642,7 +1697,7 @@ async def search_perseus(
     return _filter_scaife_search_response_by_author(response_text, author, authors)
 
 
-@mcp.tool
+@_upstream_tool
 async def search_within_text(
     query: str,
     text_urn: str,
@@ -1671,10 +1726,11 @@ async def search_within_text(
             "offset": _non_negative_int(offset, "offset"),
             "fields": "",
         },
+        validator=validate_search,
     )
 
 
-@mcp.tool
+@_upstream_tool
 async def get_passage_highlights(
     query: str,
     passage_urn: str,
@@ -1697,25 +1753,26 @@ async def get_passage_highlights(
             "size": 1,
             "fields": "highlights",
         },
+        validator=validate_search,
     )
 
 
-@mcp.tool
+@_upstream_tool
 async def get_scaife_library_metadata(urn: str) -> str:
     """Get Scaife JSON metadata for a textgroup, work, edition, or translation URN."""
-    return await _get(_scaife_library_url(urn))
+    return await _get(_scaife_library_url(urn), validator=validate_metadata)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_scaife_passage_json(urn: str) -> str:
     """Get Scaife JSON passage metadata/content for a passage URN."""
-    return await _get(_scaife_passage_json_url(urn))
+    return await _get(_scaife_passage_json_url(urn), validator=validate_passage_json)
 
 
-@mcp.tool
+@_upstream_tool
 async def get_scaife_passage_text(urn: str) -> str:
     """Get Scaife plaintext for a passage URN."""
-    return await _get(_scaife_passage_text_url(urn))
+    return await _get(_scaife_passage_text_url(urn), validator=validate_text)
 
 
 def main() -> None:
