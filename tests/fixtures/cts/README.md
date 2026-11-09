@@ -11,7 +11,8 @@ reference response contains the whole edition despite the requested book.
 The large inventory and reference files are intentionally kept complete.
 
 The `Live CTS format monitor` workflow fetches all four URLs in `sources.json`
-daily at 05:23 UTC and can also be started manually in GitHub Actions. It compares
+on the first Monday of each month at 05:23 UTC and can also be started manually
+in GitHub Actions. Other Mondays skip the live check. It compares
 the exact expanded XML root names (local name and namespace), reports each
 endpoint in the job summary, and fails the monitoring run on drift or upstream
 failure. It runs independently of pull requests and is not a required merge
