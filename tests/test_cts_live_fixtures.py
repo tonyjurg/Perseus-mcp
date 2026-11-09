@@ -98,7 +98,7 @@ def test_valid_cts_cache_is_preserved(monkeypatch, tmp_path, response, source):
                     "cts",
                     parts,
                     fetch,
-                    validator=validate,
+                    disk_validator=validate,
                 )
                 == body
             )

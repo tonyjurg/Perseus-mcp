@@ -430,10 +430,11 @@ async def _cached_text(
     *,
     extension: str = "xml",
     refresh: bool = False,
-    validator: Callable[[str], None] = validate_text,
+    disk_validator: Callable[[str], None] = validate_text,
 ) -> str:
     """Cache validated fetch results; validate untrusted disk entries on load.
 
+    disk_validator runs only on disk loads, not memory hits or fresh fetches.
     Fetchers must validate before returning (the production fetchers use _get).
     Memory entries have already passed upstream or disk validation.
     """
@@ -448,7 +449,7 @@ async def _cached_text(
         cached = _disk_cache_get(path)
         if cached is not None:
             try:
-                validator(cached)
+                disk_validator(cached)
             except UpstreamFailure as exc:
                 _MEMORY_CACHE.pop(memory_key, None)
                 with suppress(OSError):
@@ -482,7 +483,7 @@ async def _get_capabilities_cached(refresh: bool = False) -> str:
         {"request": "GetCapabilities", "base": CTS_BASE},
         lambda: _cts_request("GetCapabilities"),
         refresh=refresh,
-        validator=partial(validate_cts, request="GetCapabilities"),
+        disk_validator=partial(validate_cts, request="GetCapabilities"),
     )
 
 
@@ -493,7 +494,7 @@ async def _get_scaife_library_catalog_cached(refresh: bool = False) -> str:
         lambda: _get(SCAIFE_LIBRARY_CATALOG, validator=validate_catalogue),
         extension="json",
         refresh=refresh,
-        validator=validate_catalogue,
+        disk_validator=validate_catalogue,
     )
 
 
@@ -508,7 +509,7 @@ async def _get_valid_references_cached(
         {"request": "GetValidReff", "base": CTS_BASE, "urn": urn, **params},
         lambda: _cts_request("GetValidReff", urn=urn, **params),
         refresh=refresh,
-        validator=partial(validate_cts, request="GetValidReff"),
+        disk_validator=partial(validate_cts, request="GetValidReff"),
     )
 
 
