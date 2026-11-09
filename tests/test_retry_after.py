@@ -35,7 +35,22 @@ def test_retry_after_parsing(value, expected):
     assert parse_retry_after(value, now=NOW) == expected
 
 
-@pytest.mark.parametrize("status", [400, 404, 429, 500, 502, 503, 504, 599])
+@pytest.mark.parametrize(
+    "status,retryable",
+    [
+        (400, False),
+        (404, False),
+        (429, True),
+        (500, True),
+        (501, False),
+        (502, True),
+        (503, True),
+        (504, True),
+        (505, False),
+        (511, False),
+        (599, False),
+    ],
+)
 @pytest.mark.parametrize(
     "header,delay",
     [
@@ -46,7 +61,9 @@ def test_retry_after_parsing(value, expected):
         ("Mon, 09 Nov 2026 14:00:31 GMT", 31),
     ],
 )
-def test_http_retry_guidance_reaches_mcp_caller(monkeypatch, status, header, delay):
+def test_http_retry_guidance_reaches_mcp_caller(
+    monkeypatch, status, retryable, header, delay
+):
     monkeypatch.delenv("PERSEUS_MCP_RETRY_POLICY", raising=False)
     monkeypatch.setattr(
         server, "parse_retry_after", partial(parse_retry_after, now=NOW)
@@ -78,16 +95,14 @@ def test_http_retry_guidance_reaches_mcp_caller(monkeypatch, status, header, del
                 assert data["code"] == "UPSTREAM_HTTP_ERROR"
                 assert data["upstream_http_status"] == status
                 assert data["retry_after_seconds"] == delay
-                assert data["automatic_retry_allowed"] is (
-                    status == 429 or status >= 500
-                )
+                assert data["automatic_retry_allowed"] is retryable
                 assert "private" not in result.content[0].text
 
     asyncio.run(run())
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("status", [404, 429, 502, 503, 504])
+@pytest.mark.parametrize("status", [404, 429, 500, 501, 502, 503, 504, 505, 511])
 @pytest.mark.parametrize("override", [True, False])
 def test_http_policy_override_takes_precedence_without_losing_delay(
     monkeypatch, status, override

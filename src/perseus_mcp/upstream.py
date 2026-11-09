@@ -56,7 +56,7 @@ def retry_allowed(code: str, status: int | None = None) -> bool:
     if code in overrides:
         return overrides[code]
     if code == "UPSTREAM_HTTP_ERROR" and status is not None:
-        return status == 429 or 500 <= status <= 599
+        return status in {429, 500, 502, 503, 504}
     return DEFAULT_RETRY_POLICY.get(code, False)
 
 
