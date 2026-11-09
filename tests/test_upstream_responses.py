@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+import xml.etree.ElementTree as ET
 from functools import partial
 from pathlib import Path
 
@@ -21,6 +22,9 @@ from perseus_mcp.upstream import (
 )
 
 CHALLENGE = (Path(__file__).parent / "fixtures/anubis.html").read_text(encoding="utf-8")
+MALFORMED_NAVIGATION = (
+    Path(__file__).parent / "fixtures/cts/navigation-malformed.html"
+).read_text(encoding="utf-8")
 URN = "urn:cts:greekLit:tlg0012.tlg001.perseus-grc2:1.1"
 CAPABILITIES = '<GetCapabilities xmlns="http://chs.harvard.edu/xmlns/cts"><TextInventory/></GetCapabilities>'
 
@@ -240,6 +244,8 @@ def test_invalid_author_filter_shape_is_not_reported_as_zero_results():
         ("get_passage_plus", {"urn": URN}),
         ("get_passage_plaintext", {"urn": URN}),
         ("get_label", {"urn": URN}),
+        ("get_first_urn", {"urn": URN}),
+        ("get_prev_next_urn", {"urn": URN}),
         ("get_capabilities", {}),
         ("get_valid_references", {"urn": URN}),
     ],
@@ -282,21 +288,29 @@ def test_mcp_wire_result_preserves_a_valid_empty_search(monkeypatch):
 
 
 @pytest.mark.parametrize("tool", ["get_first_urn", "get_prev_next_urn"])
-def test_cts_navigation_keeps_valid_reference_fallback(monkeypatch, tool):
+@pytest.mark.parametrize("body", [
+    MALFORMED_NAVIGATION,
+    "<CTSError><message>Unsupported request</message></CTSError>",
+], ids=["live-malformed-html", "cts-error"])
+def test_cts_navigation_keeps_valid_reference_fallback(monkeypatch, tool, body):
     monkeypatch.setenv("PERSEUS_MCP_DISABLE_CACHE", "1")
     calls = []
+    work_urn = URN.rsplit(":", 1)[0]
+    references = [f"{work_urn}:1.{line}" for line in (1, 2, 3)]
+    requested_urn = work_urn if tool == "get_first_urn" else references[1]
+    operation_name = "GetFirstUrn" if tool == "get_first_urn" else "GetPrevNextUrn"
 
     def respond(request):
         operation = request.url.params["request"]
-        calls.append(operation)
+        calls.append((operation, request.url.params["urn"]))
         if operation == "GetValidReff":
             return httpx.Response(
                 200,
-                text=f"<GetValidReff><reply><urn>{URN}</urn></reply></GetValidReff>",
+                text='<GetValidReff xmlns="http://chs.harvard.edu/xmlns/cts3/ti">'
+                "<reply><reff>" + "".join(f"<urn>{urn}</urn>" for urn in references)
+                + "</reff></reply></GetValidReff>",
             )
-        return httpx.Response(
-            200, text="<CTSError><message>Unsupported request</message></CTSError>"
-        )
+        return httpx.Response(200, text=body)
 
     async def run():
         async with httpx.AsyncClient(
@@ -307,9 +321,23 @@ def test_cts_navigation_keeps_valid_reference_fallback(monkeypatch, tool):
                 return http_client
 
             monkeypatch.setattr(server, "_shared_client", shared)
-            result = await getattr(server, tool)(URN)
-            assert "<CTSError>" not in result
-            assert "GetFirstUrn" in result or "GetPrevNextUrn" in result
+            result = await getattr(server, tool)(requested_urn)
+            root = ET.fromstring(result)
+            assert root.tag == operation_name
+            assert root.findtext("request/requestUrn") == requested_urn
+            assert root.find("reply/error") is None
+            if tool == "get_first_urn":
+                assert root.findtext("reply/urn") == references[0]
+            else:
+                assert root.findtext("reply/previous/urn") == references[0]
+                assert root.findtext("reply/next/urn") == references[2]
 
     asyncio.run(run())
-    assert len(calls) == 2 and calls[-1] == "GetValidReff"
+    assert calls == [(operation_name, requested_urn), ("GetValidReff", work_urn)]
+
+
+def test_live_navigation_fixture_reproduces_notebook_parse_error():
+    with pytest.raises(ET.ParseError, match="unbound prefix: line 2, column 2"):
+        ET.fromstring(MALFORMED_NAVIGATION)
+    with pytest.raises(UpstreamFailure, match="INVALID_PAYLOAD"):
+        validate_cts(MALFORMED_NAVIGATION, "GetFirstUrn")

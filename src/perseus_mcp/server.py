@@ -1587,7 +1587,7 @@ async def get_first_urn(urn: str) -> str:
     try:
         response = await _cts_request("GetFirstUrn", urn=urn)
     except UpstreamFailure as exc:
-        if exc.code != "UPSTREAM_CTS_ERROR":
+        if exc.code not in {"UPSTREAM_CTS_ERROR", "INVALID_PAYLOAD"}:
             raise
         response = ""
     if _is_xml_response(response, "GetFirstUrn"):
@@ -1603,7 +1603,7 @@ async def get_prev_next_urn(urn: str) -> str:
     try:
         response = await _cts_request("GetPrevNextUrn", urn=urn)
     except UpstreamFailure as exc:
-        if exc.code != "UPSTREAM_CTS_ERROR":
+        if exc.code not in {"UPSTREAM_CTS_ERROR", "INVALID_PAYLOAD"}:
             raise
         response = ""
     if _is_xml_response(response, "GetPrevNextUrn"):
