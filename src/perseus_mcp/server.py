@@ -1435,7 +1435,6 @@ def _filter_scaife_search_response_by_author(
     author: str,
     authors: list[dict[str, Any]],
 ) -> str:
-    validate_search(response_text)
     data = json.loads(response_text)
     scope_urns = _urn_scope_values_from_author_entries(authors)
 

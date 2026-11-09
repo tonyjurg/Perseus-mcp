@@ -217,6 +217,36 @@ def test_invalid_disk_payload_is_evicted_and_never_recached(
     assert len(calls) == 1
 
 
+@pytest.mark.parametrize("list_response", [False, True])
+def test_author_filtered_search_validates_once(monkeypatch, list_response):
+    results = [{"urn": URN}, {"urn": "urn:cts:greekLit:tlg0059.tlg001:1"}]
+    body = json.dumps(results if list_response else {"results": results})
+    validations = []
+
+    def validate(value):
+        validations.append(value)
+        validate_search(value)
+
+    async def resolve_author(author, language):
+        return [{"urn": "urn:cts:greekLit:tlg0012"}]
+
+    monkeypatch.setattr(server, "validate_search", validate)
+    monkeypatch.setattr(server, "_resolve_author_entries", resolve_author)
+    client, requests = mock_upstream(monkeypatch, body)
+
+    async def run():
+        async with client:
+            return await server.search_perseus(
+                "word", author="Homer", work="urn:cts:greekLit:tlg0012.tlg001"
+            )
+
+    result = json.loads(asyncio.run(run()))
+    assert result["results"] == [results[0]]
+    assert result["author_scope"]["unfiltered_page_result_count"] == 2
+    assert validations == [body]
+    assert len(requests) == 1
+
+
 def test_invalid_author_filter_shape_is_not_reported_as_zero_results():
     with pytest.raises(UpstreamFailure, match="INVALID_PAYLOAD"):
         server._filter_scaife_search_response_by_author(
