@@ -67,11 +67,7 @@ SCAIFE_LIBRARY_JSON = json.dumps(
                     {
                         "urn": "urn:cts:greekLit:tlg0018.tlg001",
                         "texts": [
-                            {
-                                "urn": (
-                                    "urn:cts:greekLit:tlg0018.tlg001.1st1K-grc1"
-                                )
-                            }
+                            {"urn": ("urn:cts:greekLit:tlg0018.tlg001.1st1K-grc1")}
                         ],
                     }
                 ],
@@ -101,7 +97,9 @@ PASSAGE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 
 def test_list_text_groups_filters_by_latin_language_and_query() -> None:
     result = json.loads(
-        _list_text_groups_from_capabilities(CAPABILITIES_XML, language="latin", query="ovid")
+        _list_text_groups_from_capabilities(
+            CAPABILITIES_XML, language="latin", query="ovid"
+        )
     )
 
     assert result["language"] == "lat"

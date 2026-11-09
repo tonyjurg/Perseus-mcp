@@ -80,7 +80,9 @@ def test_author_resources_sorts_exact_name_before_partial_match() -> None:
 
 
 def test_author_resources_matches_textgroup_urn_fragment() -> None:
-    result = json.loads(_author_resources_from_capabilities(CAPABILITIES_XML, "tlg0007"))
+    result = json.loads(
+        _author_resources_from_capabilities(CAPABILITIES_XML, "tlg0007")
+    )
 
     assert result["match_count"] == 1
     assert result["authors"][0]["names"] == ["Plutarch"]

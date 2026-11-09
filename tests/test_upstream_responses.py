@@ -254,11 +254,19 @@ def test_invalid_author_filter_shape_is_not_reported_as_zero_results():
         )
 
 
-@pytest.mark.parametrize("cache,args,body,validator_name", [
-    ("_get_capabilities_cached", (), CAPABILITIES, "validate_cts"),
-    ("_get_valid_references_cached", (URN,), "<GetValidReff/>", "validate_cts"),
-    ("_get_scaife_library_catalog_cached", (), '{"text_groups": []}', "validate_catalogue"),
-])
+@pytest.mark.parametrize(
+    "cache,args,body,validator_name",
+    [
+        ("_get_capabilities_cached", (), CAPABILITIES, "validate_cts"),
+        ("_get_valid_references_cached", (URN,), "<GetValidReff/>", "validate_cts"),
+        (
+            "_get_scaife_library_catalog_cached",
+            (),
+            '{"text_groups": []}',
+            "validate_catalogue",
+        ),
+    ],
+)
 def test_cached_fetch_validates_once_and_refresh_still_validates(
     monkeypatch, tmp_path, cache, args, body, validator_name
 ):
@@ -348,10 +356,14 @@ def test_mcp_wire_result_preserves_a_valid_empty_search(monkeypatch):
 
 
 @pytest.mark.parametrize("tool", ["get_first_urn", "get_prev_next_urn"])
-@pytest.mark.parametrize("body", [
-    MALFORMED_NAVIGATION,
-    "<CTSError><message>Unsupported request</message></CTSError>",
-], ids=["live-malformed-html", "cts-error"])
+@pytest.mark.parametrize(
+    "body",
+    [
+        MALFORMED_NAVIGATION,
+        "<CTSError><message>Unsupported request</message></CTSError>",
+    ],
+    ids=["live-malformed-html", "cts-error"],
+)
 def test_cts_navigation_keeps_valid_reference_fallback(monkeypatch, tool, body):
     monkeypatch.setenv("PERSEUS_MCP_DISABLE_CACHE", "1")
     calls = []
@@ -367,7 +379,8 @@ def test_cts_navigation_keeps_valid_reference_fallback(monkeypatch, tool, body):
             return httpx.Response(
                 200,
                 text='<GetValidReff xmlns="http://chs.harvard.edu/xmlns/cts3/ti">'
-                "<reply><reff>" + "".join(f"<urn>{urn}</urn>" for urn in references)
+                "<reply><reff>"
+                + "".join(f"<urn>{urn}</urn>" for urn in references)
                 + "</reff></reply></GetValidReff>",
             )
         return httpx.Response(200, text=body)

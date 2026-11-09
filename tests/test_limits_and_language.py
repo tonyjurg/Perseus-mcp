@@ -39,7 +39,9 @@ def test_valid_references_json_rejects_excessive_limit() -> None:
         "</GetValidReff>"
     )
     with pytest.raises(ValueError, match="must not exceed 500"):
-        _valid_references_json(references_xml, "urn:cts:greekLit:tlg0012.tlg001", limit=10_000)
+        _valid_references_json(
+            references_xml, "urn:cts:greekLit:tlg0012.tlg001", limit=10_000
+        )
 
 
 def test_list_text_groups_rejects_excessive_limit() -> None:

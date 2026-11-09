@@ -192,7 +192,9 @@ def _max_response_bytes() -> int:
     try:
         limit = int(value)
     except ValueError:
-        raise ValueError("PERSEUS_MCP_MAX_RESPONSE_BYTES must be a positive integer") from None
+        raise ValueError(
+            "PERSEUS_MCP_MAX_RESPONSE_BYTES must be a positive integer"
+        ) from None
     if limit <= 0:
         raise ValueError("PERSEUS_MCP_MAX_RESPONSE_BYTES must be a positive integer")
     return limit
@@ -233,7 +235,8 @@ async def _get(
             if length.isdigit() and int(length) > limit:
                 raise UpstreamFailure(
                     "UPSTREAM_RESPONSE_TOO_LARGE",
-                    "The upstream response exceeds the configured size limit.", status,
+                    "The upstream response exceeds the configured size limit.",
+                    status,
                 )
             body = bytearray()
             async for chunk in response.aiter_bytes():
@@ -242,7 +245,8 @@ async def _get(
                 if len(chunk) > limit - len(body):
                     raise UpstreamFailure(
                         "UPSTREAM_RESPONSE_TOO_LARGE",
-                        "The upstream response exceeds the configured size limit.", status,
+                        "The upstream response exceeds the configured size limit.",
+                        status,
                     )
                 body.extend(chunk)
             text = body.decode(response.encoding or "utf-8", errors="replace")
@@ -269,28 +273,39 @@ async def _get(
             return text
     except httpx.HTTPStatusError as exc:
         raise UpstreamFailure(
-            "UPSTREAM_HTTP_ERROR", "The upstream service returned an HTTP error.",
+            "UPSTREAM_HTTP_ERROR",
+            "The upstream service returned an HTTP error.",
             exc.response.status_code,
         ) from None
     except httpx.TimeoutException:
         raise UpstreamFailure(
-            "UPSTREAM_TIMEOUT", "The upstream request timed out.", status,
+            "UPSTREAM_TIMEOUT",
+            "The upstream request timed out.",
+            status,
         ) from None
     except httpx.NetworkError:
         raise UpstreamFailure(
-            "UPSTREAM_CONNECTION_ERROR", "The upstream connection failed.", status,
+            "UPSTREAM_CONNECTION_ERROR",
+            "The upstream connection failed.",
+            status,
         ) from None
     except httpx.RequestError:
         raise UpstreamFailure(
-            "UPSTREAM_TRANSPORT_ERROR", "The upstream request could not be completed.", status,
+            "UPSTREAM_TRANSPORT_ERROR",
+            "The upstream request could not be completed.",
+            status,
         ) from None
 
 
-async def _cts_request(request: str, urn: str | None = None, **extra_params: Any) -> str:
+async def _cts_request(
+    request: str, urn: str | None = None, **extra_params: Any
+) -> str:
     params: dict[str, Any] = {"request": request, **extra_params}
     if urn:
         params["urn"] = urn
-    return await _get(CTS_BASE, params=params, validator=partial(validate_cts, request=request))
+    return await _get(
+        CTS_BASE, params=params, validator=partial(validate_cts, request=request)
+    )
 
 
 def _cache_enabled() -> bool:
@@ -477,7 +492,11 @@ async def _get_valid_references_cached(
 
 def _cache_status() -> str:
     cache_dir = _cache_dir()
-    files = [path for path in cache_dir.rglob("*") if path.is_file()] if cache_dir.exists() else []
+    files = (
+        [path for path in cache_dir.rglob("*") if path.is_file()]
+        if cache_dir.exists()
+        else []
+    )
     return json.dumps(
         {
             "enabled": _cache_enabled(),
@@ -492,9 +511,7 @@ def _cache_status() -> str:
     )
 
 
-def _remove_readonly_cache_entry(
-    function, path: str, error: BaseException
-) -> None:
+def _remove_readonly_cache_entry(function, path: str, error: BaseException) -> None:
     """Make a protected cache entry writable and retry its removal.
 
     On Unix, a protected parent directory can prevent even ``chmod`` from
@@ -546,7 +563,11 @@ def _clear_cache() -> str:
     if removed:
         _rmtree(cache_dir)
     return json.dumps(
-        {"cache_dir": str(cache_dir), "memory_entries": 0, "disk_cache_removed": removed},
+        {
+            "cache_dir": str(cache_dir),
+            "memory_entries": 0,
+            "disk_cache_removed": removed,
+        },
         ensure_ascii=False,
         indent=2,
     )
@@ -565,7 +586,9 @@ def _element_text(element: ET.Element) -> str:
     return _normalize_space("".join(element.itertext()))
 
 
-def _direct_children(element: ET.Element, local_name: str | None = None) -> list[ET.Element]:
+def _direct_children(
+    element: ET.Element, local_name: str | None = None
+) -> list[ET.Element]:
     if local_name is None:
         return list(element)
     normalized_name = local_name.casefold()
@@ -729,7 +752,9 @@ def _normalize_greek_query(query: str, query_format: str = "auto") -> str:
 
 
 def _resource_entry(element: ET.Element) -> dict[str, Any]:
-    labels = _direct_child_texts(element, "label") or _direct_child_texts(element, "title")
+    labels = _direct_child_texts(element, "label") or _direct_child_texts(
+        element, "title"
+    )
     descriptions = _direct_child_texts(element, "description")
     entry = {
         "type": _local_name(element.tag),
@@ -751,7 +776,9 @@ def _work_entry(work: ET.Element) -> dict[str, Any]:
         "urn": work.attrib.get("urn"),
         "language": _element_language(work),
         "titles": _direct_child_texts(work, "title"),
-        "editions": [resource for resource in resources if resource["type"] == "edition"],
+        "editions": [
+            resource for resource in resources if resource["type"] == "edition"
+        ],
         "translations": [
             resource for resource in resources if resource["type"] == "translation"
         ],
@@ -759,7 +786,9 @@ def _work_entry(work: ET.Element) -> dict[str, Any]:
     }
 
 
-def _text_group_entry(text_group: ET.Element, include_works: bool = True) -> dict[str, Any]:
+def _text_group_entry(
+    text_group: ET.Element, include_works: bool = True
+) -> dict[str, Any]:
     works = [_work_entry(work) for work in _direct_children(text_group, "work")]
     entry: dict[str, Any] = {
         "urn": text_group.attrib.get("urn"),
@@ -800,7 +829,9 @@ def _query_match_rank(values: list[str | None], query: str) -> tuple[int, int]:
             return (2, len(value))
         return (3, len(value))
 
-    matches = [value_rank(value) for value in normalized_values if normalized_query in value]
+    matches = [
+        value_rank(value) for value in normalized_values if normalized_query in value
+    ]
     return min(matches, default=(4, 0))
 
 
@@ -1027,7 +1058,9 @@ def _matching_author_entries_from_capabilities(
             searchable = [entry.get("urn"), *searchable]
         if not _text_matches_query(searchable, query):
             continue
-        works = [work for work in entry["works"] if _work_matches_language(work, language)]
+        works = [
+            work for work in entry["works"] if _work_matches_language(work, language)
+        ]
         if not works and language is not None:
             continue
         entry["works"] = works
@@ -1058,7 +1091,9 @@ def _list_text_groups_from_capabilities(
         if _local_name(text_group.tag).casefold() != "textgroup":
             continue
         entry = _text_group_entry(text_group)
-        works = [work for work in entry["works"] if _work_matches_language(work, language)]
+        works = [
+            work for work in entry["works"] if _work_matches_language(work, language)
+        ]
         if not works:
             continue
         searchable = [entry.get("urn"), *entry.get("names", [])]
@@ -1343,7 +1378,9 @@ def _extract_cts_urns(value: Any) -> list[str]:
     urns: list[str] = []
 
     if isinstance(value, str):
-        urns.extend(match.group(0).rstrip(".,;)]}") for match in _CTS_URN_RE.finditer(value))
+        urns.extend(
+            match.group(0).rstrip(".,;)]}") for match in _CTS_URN_RE.finditer(value)
+        )
     elif isinstance(value, dict):
         for item in value.values():
             urns.extend(_extract_cts_urns(item))
@@ -1356,10 +1393,7 @@ def _extract_cts_urns(value: Any) -> list[str]:
 
 def _urn_matches_scope(urn: str, scope_urns: list[str]) -> bool:
     for scope_urn in scope_urns:
-        if (
-            urn == scope_urn
-            or urn.startswith((f"{scope_urn}.", f"{scope_urn}:"))
-        ):
+        if urn == scope_urn or urn.startswith((f"{scope_urn}.", f"{scope_urn}:")):
             return True
     return False
 
@@ -1441,7 +1475,9 @@ def _filter_scaife_search_response_by_author(
     if isinstance(data, dict) and isinstance(data.get("results"), list):
         results = data["results"]
         filtered_results = [
-            result for result in results if _result_matches_author_scope(result, scope_urns)
+            result
+            for result in results
+            if _result_matches_author_scope(result, scope_urns)
         ]
         data["results"] = filtered_results
         data["author_scope"] = {
@@ -1456,7 +1492,9 @@ def _filter_scaife_search_response_by_author(
 
     if isinstance(data, list):
         filtered_results = [
-            result for result in data if _result_matches_author_scope(result, scope_urns)
+            result
+            for result in data
+            if _result_matches_author_scope(result, scope_urns)
         ]
         return json.dumps(
             {
@@ -1474,7 +1512,9 @@ def _filter_scaife_search_response_by_author(
             indent=2,
         )
 
-    raise UpstreamFailure("INVALID_PAYLOAD", "The upstream search response has an unexpected format.")
+    raise UpstreamFailure(
+        "INVALID_PAYLOAD", "The upstream search response has an unexpected format."
+    )
 
 
 @_upstream_tool
@@ -1629,9 +1669,7 @@ async def find_author_names(
 
 
 @_upstream_tool
-async def get_work_resources(
-    urn_or_title: str, language: str | None = None
-) -> str:
+async def get_work_resources(urn_or_title: str, language: str | None = None) -> str:
     """List editions/translations/resources for a matching work URN or title.
 
     Optional `language` accepts values such as "greek", "grc", "latin", or
@@ -1642,9 +1680,7 @@ async def get_work_resources(
     - urn_or_title: "Iliad"
     """
     capabilities_xml = await _get_capabilities_cached()
-    return _work_resources_from_capabilities(
-        capabilities_xml, urn_or_title, language
-    )
+    return _work_resources_from_capabilities(capabilities_xml, urn_or_title, language)
 
 
 @_upstream_tool
@@ -1663,7 +1699,8 @@ async def get_label(urn: str) -> str:
         references = _reference_urns_from_xml(await _get_valid_references_cached(urn))
         if not references:
             raise UpstreamFailure(
-                "INVALID_PAYLOAD", "No valid references are available for label metadata."
+                "INVALID_PAYLOAD",
+                "No valid references are available for label metadata.",
             )
         passage_urn = references[0]
 

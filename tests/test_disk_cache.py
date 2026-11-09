@@ -35,7 +35,9 @@ def test_disk_cache_set_leaves_no_leftover_temp_files(tmp_path, monkeypatch) -> 
     assert path.read_text(encoding="utf-8") == "second"
 
 
-def test_disk_cache_set_cleans_up_temp_file_on_write_failure(tmp_path, monkeypatch) -> None:
+def test_disk_cache_set_cleans_up_temp_file_on_write_failure(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.delenv("PERSEUS_MCP_DISABLE_CACHE", raising=False)
     path = tmp_path / "capabilities" / "abc123.xml"
     path.parent.mkdir(parents=True)
@@ -123,7 +125,10 @@ def test_disk_cache_set_temp_filename_includes_pid_for_concurrent_writers(
     _disk_cache_set(path, "value")
 
     assert len(seen_names) == 1
-    assert seen_names[0] == f"abc123.xml.tmp-{os.getpid()}-{seen_names[0].rsplit('-', 1)[-1]}"
+    assert (
+        seen_names[0]
+        == f"abc123.xml.tmp-{os.getpid()}-{seen_names[0].rsplit('-', 1)[-1]}"
+    )
 
 
 def test_disk_cache_get_treats_concurrent_removal_as_cache_miss(monkeypatch) -> None:
