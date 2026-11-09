@@ -194,7 +194,7 @@ def test_invalid_disk_payload_is_evicted_and_never_recached(
                 "capabilities",
                 {"request": "GetCapabilities"},
                 lambda: server._cts_request("GetCapabilities"),
-                validator=partial(validate_cts, request="GetCapabilities"),
+                disk_validator=partial(validate_cts, request="GetCapabilities"),
             )
 
     if replacement == CHALLENGE:
