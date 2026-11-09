@@ -2,7 +2,6 @@
 
 import asyncio
 import time
-from functools import partial
 from pathlib import Path
 
 import httpx
@@ -72,10 +71,17 @@ def test_valid_cts_cache_is_preserved(monkeypatch, tmp_path, response, source):
     if source == "memory":
         server._MEMORY_CACHE[f"cts:{key}"] = (time.time(), body)
     calls = []
+    validations = []
+
+    def validate(value):
+        validations.append(value)
+        validate_cts(value, operation)
 
     async def fetch():
         calls.append(True)
         assert source == "upstream", "Valid cached CTS must not be refetched"
+        # Match the validated-fetcher contract used by _get in production.
+        validate(body)
         return body
 
     async def run():
@@ -85,13 +91,14 @@ def test_valid_cts_cache_is_preserved(monkeypatch, tmp_path, response, source):
                     "cts",
                     parts,
                     fetch,
-                    validator=partial(validate_cts, request=operation),
+                    validator=validate,
                 )
                 == body
             )
 
     asyncio.run(run())
     assert len(calls) == (1 if source == "upstream" else 0)
+    assert len(validations) == (0 if source == "memory" else 1)
     assert path.read_text(encoding="utf-8") == body
     assert server._MEMORY_CACHE[f"cts:{key}"][1] == body
 
