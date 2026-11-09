@@ -428,6 +428,45 @@ they are never search results and are not retried automatically. Invalid respons
 formats use `INVALID_PAYLOAD`, and recognised CTS errors use `INVALID_URN` or
 `UPSTREAM_CTS_ERROR`. Invalid metadata cache entries are discarded before refetching.
 
+HTTP failures use `UPSTREAM_HTTP_ERROR`; timeouts use `UPSTREAM_TIMEOUT`;
+connection/read/write failures use `UPSTREAM_CONNECTION_ERROR`; other transport
+failures (including redirect loops) use `UPSTREAM_TRANSPORT_ERROR`. Error JSON
+includes `upstream_http_status` when response headers were received, or `null`
+when no response status is available. Response bodies and raw transport details
+are not included in these messages.
+
+Responses are streamed with a default 16 MiB limit (16,777,216 bytes). Set
+`PERSEUS_MCP_MAX_RESPONSE_BYTES` to a positive integer to change it. A declared
+Content-Length above the limit is rejected before reading; decoded bytes are
+also counted, including compressed responses and responses without a reliable
+Content-Length. Oversized responses return `UPSTREAM_RESPONSE_TOO_LARGE` and
+are not cached. Redirect bodies are closed unread. This bounds retained body
+size; HTTPX still decodes individual compressed chunks before their size can
+be checked.
+
+`automatic_retry_allowed` is a policy hint for callers, not an automatic retry
+performed by this server. Its defaults are `true` for `UPSTREAM_TIMEOUT` and
+`UPSTREAM_CONNECTION_ERROR`, and `false` for all other codes above (including
+challenges, invalid payloads/URNs, CTS errors, HTTP errors, and oversized bodies).
+HTTP errors default to false because that code includes both permanent 4xx and
+transient 5xx failures; callers should inspect the status and respect any
+rate-limit guidance before retrying.
+
+Override individual defaults with the `PERSEUS_MCP_RETRY_POLICY` environment
+variable, containing a JSON object. For example, in an MCP configuration's
+`env` object:
+
+```json
+{
+  "PERSEUS_MCP_MAX_RESPONSE_BYTES": "16777216",
+  "PERSEUS_MCP_RETRY_POLICY": "{\"UPSTREAM_TIMEOUT\": false, \"UPSTREAM_CONNECTION_ERROR\": false}"
+}
+```
+
+Only known error codes and JSON boolean values are accepted. Omitted codes keep
+their defaults. No separate configuration file is needed. Changing this policy
+does not enable server-side retries or navigation/label fallbacks for challenges.
+
 | Problem | What to check |
 | --- | --- |
 | Server does not appear | Validate the JSON, use an absolute project path, and restart the client completely |

@@ -1,13 +1,52 @@
 """Validate upstream representations without exposing response bodies in errors."""
 
 import json
+import os
 import re
 import xml.etree.ElementTree as ET
+from functools import lru_cache
 from html.parser import HTMLParser
 from typing import Any
 
 from defusedxml.common import DefusedXmlException
 from defusedxml.ElementTree import fromstring
+
+DEFAULT_RETRY_POLICY = {
+    "UPSTREAM_CHALLENGE": False,
+    "INVALID_PAYLOAD": False,
+    "INVALID_URN": False,
+    "UPSTREAM_CTS_ERROR": False,
+    "UPSTREAM_HTTP_ERROR": False,
+    "UPSTREAM_TIMEOUT": True,
+    "UPSTREAM_CONNECTION_ERROR": True,
+    "UPSTREAM_TRANSPORT_ERROR": False,
+    "UPSTREAM_RESPONSE_TOO_LARGE": False,
+}
+
+
+@lru_cache(maxsize=8)
+def _retry_policy(configuration: str) -> dict[str, bool]:
+    policy = DEFAULT_RETRY_POLICY.copy()
+    if configuration:
+        try:
+            overrides = json.loads(configuration)
+        except ValueError:
+            raise ValueError("PERSEUS_MCP_RETRY_POLICY must be a JSON object") from None
+        if not isinstance(overrides, dict) or any(
+            key not in policy or type(value) is not bool
+            for key, value in overrides.items()
+        ):
+            raise ValueError(
+                "PERSEUS_MCP_RETRY_POLICY must map known error codes to booleans"
+            )
+        policy.update(overrides)
+    return policy
+
+
+def retry_allowed(code: str) -> bool:
+    return _retry_policy(os.environ.get("PERSEUS_MCP_RETRY_POLICY", "")).get(
+        code, False
+    )
 
 
 class UpstreamFailure(Exception):
@@ -25,7 +64,7 @@ class UpstreamFailure(Exception):
                 "code": self.code,
                 "message": self.message,
                 "upstream_http_status": self.status,
-                "automatic_retry_allowed": False,
+                "automatic_retry_allowed": retry_allowed(self.code),
             }
         )
 
@@ -60,7 +99,7 @@ def reject_challenge(text: str, status: int | None = None) -> None:
         raise UpstreamFailure(
             "UPSTREAM_CHALLENGE",
             "The upstream service returned an access challenge; no results were "
-            "obtained. Automatic retry is disabled.",
+            "obtained. The request was not retried automatically.",
             status,
         )
 
