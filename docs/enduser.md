@@ -364,6 +364,15 @@ The server currently provides 23 text-returning tools.
 - `get_first_urn`
 - `get_prev_next_urn`
 
+`get_label` returns upstream `GetLabel` XML when available. If that operation
+returns malformed content or a CTS service error, it derives `groupname`,
+`title`, `label`, `description`, and `versionInfo` from the request metadata of
+`GetPassage`. For work or edition URNs, it first selects an advertised passage
+using `GetValidReff`. The generated `GetLabel` XML marks its reply with
+`source="GetPassage request metadata"`; only available, nonempty fields are
+included. Access challenges and invalid URNs remain errors, and no label is
+invented if references or request metadata are missing.
+
 ### Discovery
 
 - `get_capabilities`

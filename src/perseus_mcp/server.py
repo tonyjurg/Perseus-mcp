@@ -1577,8 +1577,45 @@ async def get_work_resources(
 
 @_upstream_tool
 async def get_label(urn: str) -> str:
-    """Get human-readable labels/metadata for a CTS URN (work or edition)."""
-    return await _cts_request("GetLabel", urn=urn)
+    """Get label XML, falling back to GetPassage request metadata when needed."""
+    try:
+        return await _cts_request("GetLabel", urn=urn)
+    except UpstreamFailure as exc:
+        if exc.code not in {"UPSTREAM_CTS_ERROR", "INVALID_PAYLOAD"}:
+            raise
+
+    passage_urn = urn
+    if not urn.split(":", 4)[-1] or urn.count(":") < 4:
+        # Resolve work/edition URNs to an advertised passage rather than fetching
+        # an entire text or guessing its citation scheme.
+        references = _reference_urns_from_xml(await _get_valid_references_cached(urn))
+        if not references:
+            raise UpstreamFailure(
+                "INVALID_PAYLOAD", "No valid references are available for label metadata."
+            )
+        passage_urn = references[0]
+
+    passage = _safe_xml_fromstring(await _cts_request("GetPassage", urn=passage_urn))
+    metadata = next(
+        (child for child in passage if _local_name(child.tag) == "request"), None
+    )
+    root = ET.Element("GetLabel")
+    request = ET.SubElement(root, "request")
+    ET.SubElement(request, "requestName").text = "GetLabel"
+    ET.SubElement(request, "requestUrn").text = urn
+    reply = ET.SubElement(root, "reply", source="GetPassage request metadata")
+    fields = {"groupname", "title", "label", "description", "versionInfo"}
+    if metadata is not None:
+        for element in metadata:
+            name = _local_name(element.tag)
+            text = _element_text(element)
+            if name in fields and text:
+                ET.SubElement(reply, name, attrib=dict(element.attrib)).text = text
+    if not len(reply):
+        raise UpstreamFailure(
+            "INVALID_PAYLOAD", "The passage response contains no label metadata."
+        )
+    return ET.tostring(root, encoding="unicode")
 
 
 @_upstream_tool
