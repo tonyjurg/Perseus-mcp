@@ -1,0 +1,25 @@
+{
+  "captured": "2026-11-09",
+  "responses": [
+    {
+      "operation": "GetPassage",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetPassage&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1%3A1.1",
+      "root": "{http://chs.harvard.edu/xmlns/cts3}GetPassage"
+    },
+    {
+      "operation": "GetPassagePlus",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetPassagePlus&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1%3A1.1",
+      "root": "{http://chs.harvard.edu/xmlns/cts3}GetPassage"
+    },
+    {
+      "operation": "GetValidReff",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetValidReff&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1%3A1&level=2",
+      "root": "{http://chs.harvard.edu/xmlns/cts3/ti}GetValidReff"
+    },
+    {
+      "operation": "GetCapabilities",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetCapabilities",
+      "root": "{http://chs.harvard.edu/xmlns/cts3/ti}TextInventory"
+    }
+  ]
+}
