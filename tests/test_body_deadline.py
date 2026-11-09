@@ -87,8 +87,14 @@ def test_external_cancellation_is_not_converted_to_upstream_timeout(monkeypatch)
     asyncio.run(run())
 
 
-def test_finite_body_can_complete_with_configured_deadline(monkeypatch):
-    monkeypatch.setenv("PERSEUS_MCP_BODY_TIMEOUT_SECONDS", "1.5")
+@pytest.mark.parametrize("deadline", [None, "1.5"])
+def test_finite_body_can_complete_with_default_or_configured_deadline(
+    monkeypatch, deadline
+):
+    if deadline is None:
+        monkeypatch.delenv("PERSEUS_MCP_BODY_TIMEOUT_SECONDS", raising=False)
+    else:
+        monkeypatch.setenv("PERSEUS_MCP_BODY_TIMEOUT_SECONDS", deadline)
 
     class FiniteStream(TrickleStream):
         async def __aiter__(self):

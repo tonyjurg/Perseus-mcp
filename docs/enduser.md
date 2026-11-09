@@ -444,7 +444,8 @@ are not cached. Redirect bodies are closed unread. This bounds retained body
 size; HTTPX still decodes individual compressed chunks before their size can
 be checked.
 
-Body reading also has a total 20-second deadline. Set
+Body reading also has a total 60-second deadline to accommodate large metadata
+responses over slower connections. Set
 `PERSEUS_MCP_BODY_TIMEOUT_SECONDS` to a positive finite number of seconds
 (fractions are allowed) to change it. This deadline spans the entire body read
 and does not reset when bytes arrive, so a slow trickle cannot keep it open
@@ -474,7 +475,7 @@ variable, containing a JSON object. For example, in an MCP configuration's
 ```json
 {
   "PERSEUS_MCP_MAX_RESPONSE_BYTES": "16777216",
-  "PERSEUS_MCP_BODY_TIMEOUT_SECONDS": "20",
+  "PERSEUS_MCP_BODY_TIMEOUT_SECONDS": "60",
   "PERSEUS_MCP_RETRY_POLICY": "{\"UPSTREAM_TIMEOUT\": false, \"UPSTREAM_CONNECTION_ERROR\": false}"
 }
 ```
