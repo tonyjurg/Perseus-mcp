@@ -456,7 +456,8 @@ the body deadline starts after the final response headers, not before redirects.
 
 `automatic_retry_allowed` is a policy hint for callers, not an automatic retry
 performed by this server. Its defaults are `true` for `UPSTREAM_TIMEOUT`,
-`UPSTREAM_CONNECTION_ERROR`, and `UPSTREAM_HTTP_ERROR` with status 429 or 500–599.
+`UPSTREAM_CONNECTION_ERROR`, and `UPSTREAM_HTTP_ERROR` with status 429, 500, 502,
+503, or 504.
 Other HTTP statuses and all other codes above default to `false` (including
 challenges, invalid payloads/URNs, CTS errors, and oversized bodies).
 
@@ -483,7 +484,7 @@ variable, containing a JSON object. For example, in an MCP configuration's
 Only known error codes and JSON boolean values are accepted. Omitted codes keep
 their defaults. An explicit `UPSTREAM_HTTP_ERROR` override takes precedence over
 the status-based defaults for every HTTP status; setting it to `false` disables
-retry permission even for 429 and 5xx while preserving `retry_after_seconds`.
+retry permission even for those retryable statuses while preserving `retry_after_seconds`.
 No separate configuration file is needed. Changing this policy
 does not enable server-side retries or navigation/label fallbacks for challenges.
 
