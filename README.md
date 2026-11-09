@@ -83,6 +83,12 @@ the Scaife library catalog, so Scaife-only authors such as Philo Judaeus remain
 discoverable. Passage and navigation tools use CTS URNs, whose
 `greekLit`/`latinLit` namespace and edition identifier already select the text.
 
+Paginated `list_text_groups` and `find_author_names` responses use `total_count`
+for all matching entries before paging and `returned_count` for entries on the
+current page. Use `offset`, `limit`, and `has_more` to navigate pages. The
+redundant `match_count` field has been removed from these two responses; clients
+that read it should use `total_count` instead.
+
 ## Local Metadata Cache
 
 Discovery and navigation tools cache stable CTS metadata locally to avoid

@@ -103,7 +103,7 @@ def test_list_text_groups_filters_by_latin_language_and_query() -> None:
     )
 
     assert result["language"] == "lat"
-    assert result["match_count"] == 1
+    assert result["total_count"] == 1
     assert result["text_groups"][0]["names"] == ["Ovid"]
     assert result["text_groups"][0]["works"][0]["titles"] == ["Metamorphoses"]
 
@@ -117,7 +117,7 @@ def test_list_text_groups_reports_and_pages_all_matches() -> None:
     assert result["offset"] == 0
     assert result["limit"] == 1
     assert result["returned_count"] == 1
-    assert result["match_count"] == 2
+    assert "match_count" not in result
     assert result["has_more"] is True
     assert result["text_groups"][0]["names"] == ["Homer"]
 
@@ -125,6 +125,7 @@ def test_list_text_groups_reports_and_pages_all_matches() -> None:
         _list_text_groups_from_capabilities(CAPABILITIES_XML, limit=1, offset=1)
     )
 
+    assert "match_count" not in next_page
     assert next_page["total_count"] == 2
     assert next_page["returned_count"] == 1
     assert next_page["has_more"] is False
@@ -152,7 +153,7 @@ def test_author_name_matches_only_textgroup_names() -> None:
     )
     result = json.loads(_author_name_matches_response(authors, "Hom"))
 
-    assert result["match_count"] == 1
+    assert result["total_count"] == 1
     assert result["authors"][0]["names"] == ["Homer"]
     assert result["authors"][0]["matched_names"] == ["Homer"]
 
@@ -160,7 +161,7 @@ def test_author_name_matches_only_textgroup_names() -> None:
         CAPABILITIES_XML, "Iliad", names_only=True
     )
     no_title_match = json.loads(_author_name_matches_response(title_matches, "Iliad"))
-    assert no_title_match["match_count"] == 0
+    assert no_title_match["total_count"] == 0
 
 
 def test_author_name_matches_reports_and_pages_all_matches() -> None:
@@ -183,10 +184,11 @@ def test_author_name_matches_reports_and_pages_all_matches() -> None:
 
     assert first_page["total_count"] == 3
     assert first_page["returned_count"] == 2
-    assert first_page["match_count"] == 3
+    assert "match_count" not in first_page
     assert first_page["offset"] == 0
     assert first_page["limit"] == 2
     assert first_page["has_more"] is True
+    assert "match_count" not in second_page
     assert second_page["total_count"] == 3
     assert second_page["returned_count"] == 1
     assert second_page["has_more"] is False
@@ -228,7 +230,7 @@ def test_find_author_names_merges_scaife_when_cts_omits_author(monkeypatch) -> N
         asyncio.run(server.find_author_names("Philo", language="greek", limit=1))
     )
 
-    assert result["match_count"] == 1
+    assert result["total_count"] == 1
     assert result["authors"][0]["urn"] == "urn:cts:greekLit:tlg0018"
     assert result["authors"][0]["matched_names"] == ["Philo Judaeus"]
 
@@ -247,7 +249,7 @@ def test_find_author_names_survives_one_inventory_failure(monkeypatch) -> None:
 
     result = json.loads(asyncio.run(server.find_author_names("Philo")))
 
-    assert result["match_count"] == 1
+    assert result["total_count"] == 1
     assert result["authors"][0]["names"] == ["Philo Judaeus"]
 
 
