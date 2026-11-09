@@ -486,6 +486,11 @@ retry permission even for 429 and 5xx while preserving `retry_after_seconds`.
 No separate configuration file is needed. Changing this policy
 does not enable server-side retries or navigation/label fallbacks for challenges.
 
+The command-line server validates `PERSEUS_MCP_RETRY_POLICY`,
+`PERSEUS_MCP_MAX_RESPONSE_BYTES`, and `PERSEUS_MCP_BODY_TIMEOUT_SECONDS` at startup,
+before starting the MCP transport. Invalid settings stop startup with an error
+naming the setting, rather than failing on the first tool call.
+
 | Problem | What to check |
 | --- | --- |
 | Server does not appear | Validate the JSON, use an absolute project path, and restart the client completely |

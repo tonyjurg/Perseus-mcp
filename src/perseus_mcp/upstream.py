@@ -46,6 +46,11 @@ def _retry_policy(configuration: str) -> dict[str, bool]:
     return policy
 
 
+def validate_retry_policy() -> None:
+    """Reject invalid retry-policy configuration before starting the server."""
+    _retry_policy(os.environ.get("PERSEUS_MCP_RETRY_POLICY", ""))
+
+
 def retry_allowed(code: str, status: int | None = None) -> bool:
     overrides = _retry_policy(os.environ.get("PERSEUS_MCP_RETRY_POLICY", ""))
     if code in overrides:
