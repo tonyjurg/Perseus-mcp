@@ -53,9 +53,7 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
         "perseus_mcp.server:main"
     )
     assert configuration["tool"]["setuptools"]["package-dir"] == {"": "src"}
-    assert configuration["tool"]["setuptools"]["packages"]["find"]["where"] == [
-        "src"
-    ]
+    assert configuration["tool"]["setuptools"]["packages"]["find"]["where"] == ["src"]
     assert {"build>=1.2", "ruff>=0.16.2,<0.18", "twine>=6.0"} <= set(
         configuration["project"]["optional-dependencies"]["dev"]
     )
@@ -115,13 +113,9 @@ def test_mcp_notebooks_import_the_packaged_server() -> None:
 
 
 def test_installation_notebook_documents_supported_launch_methods() -> None:
-    notebook_path = (
-        REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb"
-    )
+    notebook_path = REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb"
     notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
-    content = "\n".join(
-        "".join(cell.get("source", [])) for cell in notebook["cells"]
-    )
+    content = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["nbformat"] == 4
     assert "python -m pip install perseus-mcp" in content
@@ -171,8 +165,10 @@ def test_dependency_review_checks_every_pull_request() -> None:
 def test_rate_limit_guidance_is_documented() -> None:
     guide = ENDUSER_GUIDE.read_text(encoding="utf-8").casefold()
     notebook = (
-        REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb"
-    ).read_text(encoding="utf-8").casefold()
+        (REPO_ROOT / "examples" / "00_install_and_run_perseus_mcp.ipynb")
+        .read_text(encoding="utf-8")
+        .casefold()
+    )
 
     for content in (guide, notebook):
         assert "429" in content
@@ -185,9 +181,7 @@ def test_openrouter_notebooks_use_free_models_router_by_default() -> None:
         "06_openrouter_llm_mcp_interaction.ipynb",
         "09_openrouter_philo_politeia_analysis.ipynb",
     ):
-        notebook_path = (
-            REPO_ROOT / "examples" / notebook_name
-        )
+        notebook_path = REPO_ROOT / "examples" / notebook_name
         notebook_json = notebook_path.read_text(encoding="utf-8")
         notebook = json.loads(notebook_json)
         content = "\n".join(
@@ -200,23 +194,20 @@ def test_openrouter_notebooks_use_free_models_router_by_default() -> None:
         assert "nvidia/nemotron" not in content
 
     tool_notebook = json.loads(
-        (
-            REPO_ROOT / "examples" / "06_openrouter_llm_mcp_interaction.ipynb"
-        ).read_text(encoding="utf-8")
+        (REPO_ROOT / "examples" / "06_openrouter_llm_mcp_interaction.ipynb").read_text(
+            encoding="utf-8"
+        )
     )
     analysis_notebook = json.loads(
         (
-            REPO_ROOT
-            / "examples"
-            / "09_openrouter_philo_politeia_analysis.ipynb"
+            REPO_ROOT / "examples" / "09_openrouter_philo_politeia_analysis.ipynb"
         ).read_text(encoding="utf-8")
     )
     tool_content = "\n".join(
         "".join(cell.get("source", [])) for cell in tool_notebook["cells"]
     )
     analysis_content = "\n".join(
-        "".join(cell.get("source", []))
-        for cell in analysis_notebook["cells"]
+        "".join(cell.get("source", [])) for cell in analysis_notebook["cells"]
     )
 
     assert '"supports_tools": True' in tool_content
