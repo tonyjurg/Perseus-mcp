@@ -1126,7 +1126,6 @@ def _list_text_groups_from_capabilities(
             "offset": offset,
             "limit": limit,
             "returned_count": len(page),
-            "match_count": len(text_groups),
             "has_more": offset + len(page) < len(text_groups),
             "text_groups": page,
         },
@@ -1175,7 +1174,6 @@ def _author_name_matches_response(
             "offset": offset,
             "limit": limit,
             "returned_count": len(authors),
-            "match_count": total_count,
             "has_more": offset + len(authors) < total_count,
             "authors": [
                 {
