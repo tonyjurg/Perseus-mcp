@@ -1,6 +1,5 @@
 import asyncio
 import json
-import time
 import xml.etree.ElementTree as ET
 from functools import partial
 from pathlib import Path
@@ -176,10 +175,9 @@ def test_supported_cts_and_tei_representations():
     )
 
 
-@pytest.mark.parametrize("source", ["memory", "disk"])
 @pytest.mark.parametrize("replacement", [CAPABILITIES, CHALLENGE])
-def test_invalid_cached_payload_is_evicted_and_never_recached(
-    monkeypatch, tmp_path, source, replacement
+def test_invalid_disk_payload_is_evicted_and_never_recached(
+    monkeypatch, tmp_path, replacement
 ):
     monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(tmp_path))
     monkeypatch.delenv("PERSEUS_MCP_DISABLE_CACHE", raising=False)
@@ -188,21 +186,16 @@ def test_invalid_cached_payload_is_evicted_and_never_recached(
     path = server._cache_path("capabilities", key, "xml")
     path.parent.mkdir(parents=True)
     path.write_text(CHALLENGE, encoding="utf-8")
-    if source == "memory":
-        server._MEMORY_CACHE[f"capabilities:{key}"] = (time.time(), CHALLENGE)
-    calls = []
-
-    async def fetch():
-        calls.append(True)
-        return replacement
+    client, calls = mock_upstream(monkeypatch, replacement)
 
     async def run():
-        return await server._cached_text(
-            "capabilities",
-            {"request": "GetCapabilities"},
-            fetch,
-            validator=partial(validate_cts, request="GetCapabilities"),
-        )
+        async with client:
+            return await server._cached_text(
+                "capabilities",
+                {"request": "GetCapabilities"},
+                lambda: server._cts_request("GetCapabilities"),
+                validator=partial(validate_cts, request="GetCapabilities"),
+            )
 
     if replacement == CHALLENGE:
         with (
@@ -229,6 +222,43 @@ def test_invalid_author_filter_shape_is_not_reported_as_zero_results():
         server._filter_scaife_search_response_by_author(
             '{"error": "unavailable"}', "Homer", []
         )
+
+
+@pytest.mark.parametrize("cache,args,body,validator_name", [
+    ("_get_capabilities_cached", (), CAPABILITIES, "validate_cts"),
+    ("_get_valid_references_cached", (URN,), "<GetValidReff/>", "validate_cts"),
+    ("_get_scaife_library_catalog_cached", (), '{"text_groups": []}', "validate_catalogue"),
+])
+def test_cached_fetch_validates_once_and_refresh_still_validates(
+    monkeypatch, tmp_path, cache, args, body, validator_name
+):
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(tmp_path))
+    monkeypatch.delenv("PERSEUS_MCP_DISABLE_CACHE", raising=False)
+    monkeypatch.setattr(server, "_MEMORY_CACHE", {})
+    original = getattr(server, validator_name)
+    validations = []
+
+    def validate(value, *args, **kwargs):
+        validations.append(value)
+        return original(value, *args, **kwargs)
+
+    monkeypatch.setattr(server, validator_name, validate)
+    client, requests = mock_upstream(monkeypatch, body)
+
+    async def run():
+        async with client:
+            fetch = getattr(server, cache)
+            assert await fetch(*args) == body
+            assert validations == [body]
+            memory = dict(server._MEMORY_CACHE)
+            assert await fetch(*args) == body
+            assert validations == [body]
+            assert server._MEMORY_CACHE == memory
+            assert await fetch(*args, refresh=True) == body
+            assert validations == [body, body]
+
+    asyncio.run(run())
+    assert len(requests) == 2
 
 
 @pytest.mark.parametrize(

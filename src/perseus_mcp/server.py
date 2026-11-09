@@ -327,14 +327,20 @@ async def _cached_text(
     refresh: bool = False,
     validator: Callable[[str], None] = validate_text,
 ) -> str:
+    """Cache validated fetch results; validate untrusted disk entries on load.
+
+    Fetchers must validate before returning (the production fetchers use _get).
+    Memory entries have already passed upstream or disk validation.
+    """
     key = _cache_key(key_parts)
     memory_key = f"{namespace}:{key}"
     path = _cache_path(namespace, key, extension)
 
     if not refresh:
         cached = _memory_cache_get(memory_key)
-        if cached is None:
-            cached = _disk_cache_get(path)
+        if cached is not None:
+            return cached
+        cached = _disk_cache_get(path)
         if cached is not None:
             try:
                 validator(cached)
@@ -352,7 +358,6 @@ async def _cached_text(
                 return cached
 
     value = await fetcher()
-    validator(value)
     _memory_cache_set(memory_key, value)
     try:
         _disk_cache_set(path, value)
