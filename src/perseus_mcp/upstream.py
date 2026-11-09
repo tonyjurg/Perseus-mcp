@@ -149,6 +149,8 @@ def validate_cts(text: str, request: str) -> None:
     if namespace not in {
         "",
         "{http://chs.harvard.edu/xmlns/cts",
+        "{http://chs.harvard.edu/xmlns/cts3",
+        "{http://chs.harvard.edu/xmlns/cts3/ti",
         "{http://www.tei-c.org/ns/1.0",
     }:
         _invalid()
@@ -173,5 +175,8 @@ def validate_cts(text: str, request: str) -> None:
         allowed.add("TextInventory")
     if request in {"GetPassage", "GetPassagePlus"}:
         allowed.add("TEI")
+    if request == "GetPassagePlus":
+        # Perseus also answers GetPassagePlus with a GetPassage envelope.
+        allowed.add("GetPassage")
     if local not in allowed:
         _invalid()

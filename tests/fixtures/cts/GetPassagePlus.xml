@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cts:GetPassage xmlns:m="http://mulberrytech.com/xslt/util"
+                xmlns:cts="http://chs.harvard.edu/xmlns/cts3"
+                xmlns:tei="http://www.tei-c.org/ns/1.0">
+   <cts:request>
+      <cts:requestName>GetPassage</cts:requestName>
+      <cts:requestUrn>urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1</cts:requestUrn>
+      <cts:psg>1.1</cts:psg>
+      <cts:workUrn>urn:cts:greekLit:tlg0012.tlg001.perseus-grc1</cts:workUrn>
+      <cts:groupname>Homer</cts:groupname>
+      <cts:title>Iliad</cts:title>
+      <cts:label>Iliad</cts:label>
+      <cts:versionInfo>Perseus 4.0</cts:versionInfo>
+   </cts:request>
+   <cts:reply>
+      <tei:TEI>
+         <tei:text xml:lang="grc">
+            <tei:body>
+               <tei:div type="line">
+                  <milestone ed="P" unit="para"/>μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος</tei:div>
+            </tei:body>
+         </tei:text>
+      </tei:TEI>
+   </cts:reply>
+</cts:GetPassage>
