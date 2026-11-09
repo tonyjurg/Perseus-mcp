@@ -31,11 +31,11 @@ from .upstream import (
     UpstreamFailure,
     parse_retry_after,
     reject_challenge,
-    retry_allowed,
     validate_catalogue,
     validate_cts,
     validate_metadata,
     validate_passage_json,
+    validate_retry_policy,
     validate_search,
     validate_text,
 )
@@ -243,7 +243,6 @@ async def _get(
 ) -> str:
     limit = _max_response_bytes()
     body_timeout = _body_timeout_seconds()
-    retry_allowed("UPSTREAM_TIMEOUT")  # Validate policy configuration before I/O.
     client = await _shared_client()
     status = None
     retry_after_seconds = None
@@ -1944,6 +1943,9 @@ async def get_scaife_passage_text(urn: str) -> str:
 
 def main() -> None:
     """Run the Perseus MCP server over the default stdio transport."""
+    validate_retry_policy()
+    _max_response_bytes()
+    _body_timeout_seconds()
     mcp.run()
 
 
