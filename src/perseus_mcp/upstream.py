@@ -14,6 +14,8 @@ from typing import Any
 from defusedxml.common import DefusedXmlException
 from defusedxml.ElementTree import fromstring
 
+MAX_RETRY_AFTER_SECONDS = 3600
+
 DEFAULT_RETRY_POLICY = {
     "UPSTREAM_CHALLENGE": False,
     "INVALID_PAYLOAD": False,
@@ -61,19 +63,23 @@ def retry_allowed(code: str, status: int | None = None) -> bool:
 
 
 def parse_retry_after(value: str | None, *, now: datetime | None = None) -> int | None:
-    """Convert Retry-After delay-seconds or HTTP-date to a nonnegative delay."""
+    """Convert Retry-After to a delay capped at one hour."""
     if value is None:
         return None
     value = value.strip()
     try:
         if re.fullmatch(r"[0-9]+", value):
-            return int(value)
+            seconds = value.lstrip("0") or "0"
+            # Bound conversion too, even for arbitrarily long digit strings.
+            if len(seconds) > len(str(MAX_RETRY_AFTER_SECONDS)):
+                return MAX_RETRY_AFTER_SECONDS
+            return min(int(seconds), MAX_RETRY_AFTER_SECONDS)
         deadline = parsedate_to_datetime(value)
         # Obsolete asctime HTTP dates have no timezone; HTTP dates use UTC.
         if deadline.tzinfo is None:
             deadline = deadline.replace(tzinfo=UTC)
         remaining = (deadline - (now or datetime.now(UTC))).total_seconds()
-        return max(0, math.ceil(remaining))
+        return min(MAX_RETRY_AFTER_SECONDS, max(0, math.ceil(remaining)))
     except (ValueError, TypeError, OverflowError):
         return None
 

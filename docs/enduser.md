@@ -464,8 +464,10 @@ challenges, invalid payloads/URNs, CTS errors, and oversized bodies).
 HTTP error JSON includes `retry_after_seconds`, a nonnegative integer parsed
 from `Retry-After`, or `null` if the header is absent or invalid. Both integer
 seconds and HTTP dates are supported; dates are converted to seconds using the
-local UTC clock, rounded up, and clamped to zero if already past. Callers should
-wait at least this long before retrying. A `null` value supplies no delay advice;
+local UTC clock, rounded up, and clamped to zero if already past. Both numeric
+and date-based delays are capped at 3,600 seconds (one hour), so unexpectedly
+large upstream values cannot request an unbounded wait. Callers should use this
+bounded delay when retrying. A `null` value supplies no delay advice;
 it does not mean retry immediately. For example, a 429 with `Retry-After: 30`
 returns `automatic_retry_allowed: true` and `retry_after_seconds: 30` by default.
 
