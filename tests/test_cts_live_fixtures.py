@@ -11,7 +11,6 @@ import pytest
 from perseus_mcp import server
 from perseus_mcp.upstream import UpstreamFailure, validate_cts
 
-
 FIXTURES = Path(__file__).parent / "fixtures" / "cts"
 OPERATIONS = ["GetPassage", "GetPassagePlus", "GetValidReff", "GetCapabilities"]
 URN = "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1"
