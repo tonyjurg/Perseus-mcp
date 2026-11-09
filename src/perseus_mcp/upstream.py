@@ -1,9 +1,12 @@
 """Validate upstream representations without exposing response bodies in errors."""
 
 import json
+import math
 import os
 import re
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from functools import lru_cache
 from html.parser import HTMLParser
 from typing import Any
@@ -26,14 +29,14 @@ DEFAULT_RETRY_POLICY = {
 
 @lru_cache(maxsize=8)
 def _retry_policy(configuration: str) -> dict[str, bool]:
-    policy = DEFAULT_RETRY_POLICY.copy()
+    policy = {}
     if configuration:
         try:
             overrides = json.loads(configuration)
         except ValueError:
             raise ValueError("PERSEUS_MCP_RETRY_POLICY must be a JSON object") from None
         if not isinstance(overrides, dict) or any(
-            key not in policy or type(value) is not bool
+            key not in DEFAULT_RETRY_POLICY or type(value) is not bool
             for key, value in overrides.items()
         ):
             raise ValueError(
@@ -43,19 +46,48 @@ def _retry_policy(configuration: str) -> dict[str, bool]:
     return policy
 
 
-def retry_allowed(code: str) -> bool:
-    return _retry_policy(os.environ.get("PERSEUS_MCP_RETRY_POLICY", "")).get(
-        code, False
-    )
+def retry_allowed(code: str, status: int | None = None) -> bool:
+    overrides = _retry_policy(os.environ.get("PERSEUS_MCP_RETRY_POLICY", ""))
+    if code in overrides:
+        return overrides[code]
+    if code == "UPSTREAM_HTTP_ERROR" and status is not None:
+        return status == 429 or 500 <= status <= 599
+    return DEFAULT_RETRY_POLICY.get(code, False)
+
+
+def parse_retry_after(value: str | None, *, now: datetime | None = None) -> int | None:
+    """Convert Retry-After delay-seconds or HTTP-date to a nonnegative delay."""
+    if value is None:
+        return None
+    value = value.strip()
+    try:
+        if re.fullmatch(r"[0-9]+", value):
+            return int(value)
+        deadline = parsedate_to_datetime(value)
+        # Obsolete asctime HTTP dates have no timezone; HTTP dates use UTC.
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=UTC)
+        remaining = (deadline - (now or datetime.now(UTC))).total_seconds()
+        return max(0, math.ceil(remaining))
+    except (ValueError, TypeError, OverflowError):
+        return None
 
 
 class UpstreamFailure(Exception):
     """An expected upstream failure with a safe, stable public description."""
 
-    def __init__(self, code: str, message: str, status: int | None = None):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status: int | None = None,
+        *,
+        retry_after_seconds: int | None = None,
+    ):
         self.code = code
         self.message = message
         self.status = status
+        self.retry_after_seconds = retry_after_seconds
         super().__init__(f"{code}: {message}")
 
     def as_json(self) -> str:
@@ -64,7 +96,8 @@ class UpstreamFailure(Exception):
                 "code": self.code,
                 "message": self.message,
                 "upstream_http_status": self.status,
-                "automatic_retry_allowed": retry_allowed(self.code),
+                "retry_after_seconds": self.retry_after_seconds,
+                "automatic_retry_allowed": retry_allowed(self.code, self.status),
             }
         )
 

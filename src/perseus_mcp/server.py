@@ -28,6 +28,7 @@ from fastmcp.exceptions import ToolError
 
 from .upstream import (
     UpstreamFailure,
+    parse_retry_after,
     reject_challenge,
     retry_allowed,
     validate_catalogue,
@@ -228,9 +229,11 @@ async def _get(
     retry_allowed("UPSTREAM_TIMEOUT")  # Validate policy configuration before I/O.
     client = await _shared_client()
     status = None
+    retry_after_seconds = None
     try:
         async with _stream_upstream(client, url, params, timeout) as response:
             status = response.status_code
+            retry_after_seconds = parse_retry_after(response.headers.get("Retry-After"))
             length = response.headers.get("Content-Length", "")
             if length.isdigit() and int(length) > limit:
                 raise UpstreamFailure(
@@ -252,10 +255,9 @@ async def _get(
             text = body.decode(response.encoding or "utf-8", errors="replace")
             reject_challenge(text, status)
             if status == 429:
-                retry_after = response.headers.get("Retry-After")
                 retry_guidance = (
-                    f" Retry after {retry_after} seconds."
-                    if retry_after and retry_after.isdigit()
+                    f" Retry after {retry_after_seconds} seconds."
+                    if retry_after_seconds is not None
                     else " Wait before retrying and reduce request concurrency."
                 )
                 warnings.warn(
@@ -276,6 +278,7 @@ async def _get(
             "UPSTREAM_HTTP_ERROR",
             "The upstream service returned an HTTP error.",
             exc.response.status_code,
+            retry_after_seconds=retry_after_seconds,
         ) from None
     except httpx.TimeoutException:
         raise UpstreamFailure(
