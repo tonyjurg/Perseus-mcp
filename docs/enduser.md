@@ -444,6 +444,15 @@ are not cached. Redirect bodies are closed unread. This bounds retained body
 size; HTTPX still decodes individual compressed chunks before their size can
 be checked.
 
+Body reading also has a total 20-second deadline. Set
+`PERSEUS_MCP_BODY_TIMEOUT_SECONDS` to a positive finite number of seconds
+(fractions are allowed) to change it. This deadline spans the entire body read
+and does not reset when bytes arrive, so a slow trickle cannot keep it open
+indefinitely. Expiry closes the stream, returns `UPSTREAM_TIMEOUT` with the
+received HTTP status, and does not cache partial content. HTTPX's existing
+per-operation timeouts still apply to connection, headers, and individual reads;
+the body deadline starts after the final response headers, not before redirects.
+
 `automatic_retry_allowed` is a policy hint for callers, not an automatic retry
 performed by this server. Its defaults are `true` for `UPSTREAM_TIMEOUT`,
 `UPSTREAM_CONNECTION_ERROR`, and `UPSTREAM_HTTP_ERROR` with status 429 or 500–599.
@@ -465,6 +474,7 @@ variable, containing a JSON object. For example, in an MCP configuration's
 ```json
 {
   "PERSEUS_MCP_MAX_RESPONSE_BYTES": "16777216",
+  "PERSEUS_MCP_BODY_TIMEOUT_SECONDS": "20",
   "PERSEUS_MCP_RETRY_POLICY": "{\"UPSTREAM_TIMEOUT\": false, \"UPSTREAM_CONNECTION_ERROR\": false}"
 }
 ```

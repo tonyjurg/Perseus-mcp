@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -201,6 +202,21 @@ def _max_response_bytes() -> int:
     return limit
 
 
+def _body_timeout_seconds() -> float:
+    value = os.environ.get("PERSEUS_MCP_BODY_TIMEOUT_SECONDS", "20")
+    try:
+        timeout = float(value)
+    except ValueError:
+        raise ValueError(
+            "PERSEUS_MCP_BODY_TIMEOUT_SECONDS must be a positive finite number"
+        ) from None
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError(
+            "PERSEUS_MCP_BODY_TIMEOUT_SECONDS must be a positive finite number"
+        )
+    return timeout
+
+
 @asynccontextmanager
 async def _stream_upstream(client, url, params, timeout):
     # HTTPX's automatic redirect handling buffers redirect bodies. Follow its
@@ -226,6 +242,7 @@ async def _get(
     validator: Callable[[str], None] = validate_text,
 ) -> str:
     limit = _max_response_bytes()
+    body_timeout = _body_timeout_seconds()
     retry_allowed("UPSTREAM_TIMEOUT")  # Validate policy configuration before I/O.
     client = await _shared_client()
     status = None
@@ -242,16 +259,19 @@ async def _get(
                     status,
                 )
             body = bytearray()
-            async for chunk in response.aiter_bytes():
-                # Count decoded bytes too: compressed and chunked responses must
-                # not bypass the limit by omitting or understating Content-Length.
-                if len(chunk) > limit - len(body):
-                    raise UpstreamFailure(
-                        "UPSTREAM_RESPONSE_TOO_LARGE",
-                        "The upstream response exceeds the configured size limit.",
-                        status,
-                    )
-                body.extend(chunk)
+            # A single deadline spans the entire body, rather than restarting
+            # whenever another chunk arrives (HTTPX's per-read timeout).
+            async with asyncio.timeout(body_timeout):
+                async for chunk in response.aiter_bytes():
+                    # Count decoded bytes too: compressed and chunked responses
+                    # must not bypass the limit with a misleading Content-Length.
+                    if len(chunk) > limit - len(body):
+                        raise UpstreamFailure(
+                            "UPSTREAM_RESPONSE_TOO_LARGE",
+                            "The upstream response exceeds the configured size limit.",
+                            status,
+                        )
+                    body.extend(chunk)
             text = body.decode(response.encoding or "utf-8", errors="replace")
             reject_challenge(text, status)
             if status == 429:
@@ -280,7 +300,7 @@ async def _get(
             exc.response.status_code,
             retry_after_seconds=retry_after_seconds,
         ) from None
-    except httpx.TimeoutException:
+    except (httpx.TimeoutException, TimeoutError):
         raise UpstreamFailure(
             "UPSTREAM_TIMEOUT",
             "The upstream request timed out.",
