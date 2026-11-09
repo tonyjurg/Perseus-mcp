@@ -1,0 +1,28 @@
+name: Live CTS format monitor
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cts-upstream-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    name: Check live CTS envelopes (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install -e .
+      - name: Compare live roots and namespaces with captured sources
+        run: python scripts/check_cts_upstream.py

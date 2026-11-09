@@ -217,15 +217,9 @@ def validate_cts(text: str, request: str) -> None:
         root = fromstring(text)
     except (ET.ParseError, DefusedXmlException, RecursionError):
         _invalid()
-    namespace, _, local = root.tag.rpartition("}")
-    if namespace not in {
-        "",
-        "{http://chs.harvard.edu/xmlns/cts",
-        "{http://chs.harvard.edu/xmlns/cts3",
-        "{http://chs.harvard.edu/xmlns/cts3/ti",
-        "{http://www.tei-c.org/ns/1.0",
-    }:
-        _invalid()
+    # Match the server's namespace-independent parsing. Namespace drift alone
+    # must not reject otherwise valid responses or evict valid disk caches.
+    local = root.tag.rsplit("}", 1)[-1]
     # Only protocol errors count; TEI content may itself contain the word "error".
     errors = [
         element

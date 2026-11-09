@@ -148,7 +148,7 @@ def test_supported_success_shapes(validator, body):
             "UPSTREAM_CTS_ERROR",
         ),
         ("<unexpected/>", "INVALID_PAYLOAD"),
-        ('<GetPassage xmlns="https://example.invalid/"/>', "INVALID_PAYLOAD"),
+        ('<Unexpected xmlns="https://example.invalid/"/>', "INVALID_PAYLOAD"),
         (
             '<!DOCTYPE x [<!ENTITY e "expanded">]><GetPassage>&e;</GetPassage>',
             "INVALID_PAYLOAD",

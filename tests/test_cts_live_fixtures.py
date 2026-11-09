@@ -15,10 +15,17 @@ OPERATIONS = ["GetPassage", "GetPassagePlus", "GetValidReff", "GetCapabilities"]
 URN = "urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1"
 
 
-@pytest.fixture(params=OPERATIONS)
+@pytest.fixture(
+    params=[(op, changed) for op in OPERATIONS for changed in (False, True)]
+)
 def response(request):
-    operation = request.param
-    return operation, (FIXTURES / f"{operation}.xml").read_text(encoding="utf-8")
+    operation, changed = request.param
+    body = (FIXTURES / f"{operation}.xml").read_text(encoding="utf-8")
+    if changed:
+        body = body.replace(
+            "http://chs.harvard.edu/xmlns/cts3", "https://example.invalid/cts-next"
+        )
+    return operation, body
 
 
 def test_live_response_validates_and_parses(response):
@@ -105,7 +112,11 @@ def test_valid_cts_cache_is_preserved(monkeypatch, tmp_path, response, source):
 
 @pytest.mark.parametrize(
     "namespace",
-    ["http://chs.harvard.edu/xmlns/cts3", "http://chs.harvard.edu/xmlns/cts3/ti"],
+    [
+        "http://chs.harvard.edu/xmlns/cts3",
+        "http://chs.harvard.edu/xmlns/cts3/ti",
+        "https://example.invalid/cts-next",
+    ],
 )
 @pytest.mark.parametrize(
     "detail,code",
