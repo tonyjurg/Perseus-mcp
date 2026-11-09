@@ -13,7 +13,7 @@ import unicodedata
 import warnings
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 from copy import deepcopy
 from functools import partial, wraps
 from pathlib import Path
@@ -29,6 +29,7 @@ from fastmcp.exceptions import ToolError
 from .upstream import (
     UpstreamFailure,
     reject_challenge,
+    retry_allowed,
     validate_catalogue,
     validate_cts,
     validate_metadata,
@@ -186,6 +187,34 @@ async def aclose_http_client() -> None:
         _HTTP_CLIENT_LOOP = None
 
 
+def _max_response_bytes() -> int:
+    value = os.environ.get("PERSEUS_MCP_MAX_RESPONSE_BYTES", "16777216")
+    try:
+        limit = int(value)
+    except ValueError:
+        raise ValueError("PERSEUS_MCP_MAX_RESPONSE_BYTES must be a positive integer") from None
+    if limit <= 0:
+        raise ValueError("PERSEUS_MCP_MAX_RESPONSE_BYTES must be a positive integer")
+    return limit
+
+
+@asynccontextmanager
+async def _stream_upstream(client, url, params, timeout):
+    # HTTPX's automatic redirect handling buffers redirect bodies. Follow its
+    # generated next_request explicitly so those bodies are closed unread too.
+    request = client.build_request("GET", url, params=params, timeout=timeout)
+    for _ in range(client.max_redirects + 1):
+        response = await client.send(request, stream=True, follow_redirects=False)
+        try:
+            if response.next_request is None:
+                yield response
+                return
+            request = response.next_request
+        finally:
+            await response.aclose()
+    raise httpx.TooManyRedirects("Upstream redirect limit exceeded", request=request)
+
+
 async def _get(
     url: str,
     params: dict[str, Any] | None = None,
@@ -193,29 +222,68 @@ async def _get(
     *,
     validator: Callable[[str], None] = validate_text,
 ) -> str:
+    limit = _max_response_bytes()
+    retry_allowed("UPSTREAM_TIMEOUT")  # Validate policy configuration before I/O.
     client = await _shared_client()
-    response = await client.get(url, params=params, timeout=timeout)
-    reject_challenge(response.text, response.status_code)
-    if response.status_code == 429:
-        retry_after = response.headers.get("Retry-After")
-        retry_guidance = (
-            f" Retry after {retry_after} seconds."
-            if retry_after and retry_after.isdigit()
-            else " Wait before retrying and reduce request concurrency."
-        )
-        warnings.warn(
-            f"Upstream service rate limit (HTTP 429) from {response.request.url}."
-            f"{retry_guidance} The request was not retried automatically.",
-            UpstreamRateLimitWarning,
-            stacklevel=2,
-        )
-    response.raise_for_status()
+    status = None
     try:
-        validator(response.text)
-    except UpstreamFailure as exc:
-        exc.status = response.status_code
-        raise
-    return response.text
+        async with _stream_upstream(client, url, params, timeout) as response:
+            status = response.status_code
+            length = response.headers.get("Content-Length", "")
+            if length.isdigit() and int(length) > limit:
+                raise UpstreamFailure(
+                    "UPSTREAM_RESPONSE_TOO_LARGE",
+                    "The upstream response exceeds the configured size limit.", status,
+                )
+            body = bytearray()
+            async for chunk in response.aiter_bytes():
+                # Count decoded bytes too: compressed and chunked responses must
+                # not bypass the limit by omitting or understating Content-Length.
+                if len(chunk) > limit - len(body):
+                    raise UpstreamFailure(
+                        "UPSTREAM_RESPONSE_TOO_LARGE",
+                        "The upstream response exceeds the configured size limit.", status,
+                    )
+                body.extend(chunk)
+            text = body.decode(response.encoding or "utf-8", errors="replace")
+            reject_challenge(text, status)
+            if status == 429:
+                retry_after = response.headers.get("Retry-After")
+                retry_guidance = (
+                    f" Retry after {retry_after} seconds."
+                    if retry_after and retry_after.isdigit()
+                    else " Wait before retrying and reduce request concurrency."
+                )
+                warnings.warn(
+                    "Upstream service rate limit (HTTP 429)."
+                    f"{retry_guidance} The request was not retried automatically.",
+                    UpstreamRateLimitWarning,
+                    stacklevel=2,
+                )
+            response.raise_for_status()
+            try:
+                validator(text)
+            except UpstreamFailure as exc:
+                exc.status = status
+                raise
+            return text
+    except httpx.HTTPStatusError as exc:
+        raise UpstreamFailure(
+            "UPSTREAM_HTTP_ERROR", "The upstream service returned an HTTP error.",
+            exc.response.status_code,
+        ) from None
+    except httpx.TimeoutException:
+        raise UpstreamFailure(
+            "UPSTREAM_TIMEOUT", "The upstream request timed out.", status,
+        ) from None
+    except httpx.NetworkError:
+        raise UpstreamFailure(
+            "UPSTREAM_CONNECTION_ERROR", "The upstream connection failed.", status,
+        ) from None
+    except httpx.RequestError:
+        raise UpstreamFailure(
+            "UPSTREAM_TRANSPORT_ERROR", "The upstream request could not be completed.", status,
+        ) from None
 
 
 async def _cts_request(request: str, urn: str | None = None, **extra_params: Any) -> str:

@@ -1,10 +1,10 @@
 import asyncio
-from typing import ClassVar
 
 import httpx
 import pytest
 
 from perseus_mcp import server
+from perseus_mcp.upstream import UpstreamFailure
 
 
 def test_shared_client_is_reused_within_one_event_loop() -> None:
@@ -115,89 +115,69 @@ def test_aclose_http_client_resets_state_after_unrelated_close_error() -> None:
 
 
 def test_get_reuses_shared_client_across_calls(monkeypatch) -> None:
-    seen_client_ids: list[int] = []
+    requests = []
 
-    class FakeResponse:
-        status_code = 200
-        text = "ok"
-        headers: ClassVar[dict[str, str]] = {}
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(200, text="ok")
 
-        def raise_for_status(self) -> None:
-            return None
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
 
-    class FakeClient:
-        is_closed = False
+            async def shared():
+                return client
 
-        async def get(self, url, params=None, timeout=20.0):
-            seen_client_ids.append(id(self))
-            return FakeResponse()
+            monkeypatch.setattr(server, "_shared_client", shared)
+            assert await server._get("https://example.invalid/a") == "ok"
+            assert await server._get("https://example.invalid/b") == "ok"
 
-    fake_client = FakeClient()
+    asyncio.run(scenario())
+    assert [request.url.path for request in requests] == ["/a", "/b"]
 
-    async def get_fake_client():
-        return fake_client
 
-    monkeypatch.setattr(server, "_shared_client", get_fake_client)
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 500, 502, 503])
+def test_get_maps_non_2xx_status(monkeypatch, status) -> None:
+    async def scenario():
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(status, text="private error body")
+            )
+        ) as client:
 
-    async def scenario() -> None:
-        await server._get("https://example.invalid/a")
-        await server._get("https://example.invalid/b")
+            async def shared():
+                return client
+
+            monkeypatch.setattr(server, "_shared_client", shared)
+            with pytest.raises(UpstreamFailure, match="UPSTREAM_HTTP_ERROR") as caught:
+                await server._get("https://example.invalid/private-query")
+            assert caught.value.status == status
+            assert "private" not in caught.value.as_json()
 
     asyncio.run(scenario())
 
-    assert seen_client_ids == [id(fake_client), id(fake_client)]
 
-
-def test_get_raises_for_non_2xx_status(monkeypatch) -> None:
-    class FakeResponse:
-        status_code = 500
-        text = "error body"
-        headers: ClassVar[dict[str, str]] = {}
-
-        def raise_for_status(self) -> None:
-            raise httpx.HTTPStatusError(
-                "boom", request=httpx.Request("GET", "https://example.invalid"), response=None
+def test_get_warns_and_maps_429_error(monkeypatch) -> None:
+    async def scenario():
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    429, headers={"Retry-After": "30"}, text="rate limited"
+                )
             )
+        ) as client:
 
-    class FakeClient:
-        is_closed = False
+            async def shared():
+                return client
 
-        async def get(self, url, params=None, timeout=20.0):
-            return FakeResponse()
+            monkeypatch.setattr(server, "_shared_client", shared)
+            with (
+                pytest.warns(
+                    server.UpstreamRateLimitWarning,
+                    match=r"HTTP 429.*Retry after 30 seconds.*not retried automatically",
+                ),
+                pytest.raises(UpstreamFailure, match="UPSTREAM_HTTP_ERROR") as caught,
+            ):
+                await server._get("https://example.invalid/rate-limited")
+            assert caught.value.status == 429
 
-    async def get_fake_client():
-        return FakeClient()
-
-    monkeypatch.setattr(server, "_shared_client", get_fake_client)
-
-    with pytest.raises(httpx.HTTPStatusError):
-        asyncio.run(server._get("https://example.invalid/a"))
-
-
-def test_get_warns_and_preserves_429_error(monkeypatch) -> None:
-    request = httpx.Request("GET", "https://example.invalid/rate-limited")
-    response = httpx.Response(
-        429,
-        request=request,
-        headers={"Retry-After": "30"},
-        text="rate limited",
-    )
-
-    class FakeClient:
-        is_closed = False
-
-        async def get(self, url, params=None, timeout=20.0):
-            return response
-
-    async def get_fake_client():
-        return FakeClient()
-
-    monkeypatch.setattr(server, "_shared_client", get_fake_client)
-
-    with pytest.warns(
-        server.UpstreamRateLimitWarning,
-        match=r"HTTP 429.*Retry after 30 seconds.*not retried automatically",
-    ), pytest.raises(httpx.HTTPStatusError) as exc_info:
-        asyncio.run(server._get(str(request.url)))
-
-    assert exc_info.value.response.status_code == 429
+    asyncio.run(scenario())
