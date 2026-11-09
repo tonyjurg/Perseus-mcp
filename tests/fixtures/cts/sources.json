@@ -21,5 +21,22 @@
       "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetCapabilities",
       "root": "{http://chs.harvard.edu/xmlns/cts3/ti}TextInventory"
     }
+  ],
+  "probes": [
+    {
+      "operation": "GetLabel",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetLabel&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1",
+      "local_root": "GetLabel"
+    },
+    {
+      "operation": "GetFirstUrn",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetFirstUrn&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1",
+      "local_root": "GetFirstUrn"
+    },
+    {
+      "operation": "GetPrevNextUrn",
+      "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetPrevNextUrn&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1%3A1.2",
+      "local_root": "GetPrevNextUrn"
+    }
   ]
 }
