@@ -445,12 +445,18 @@ size; HTTPX still decodes individual compressed chunks before their size can
 be checked.
 
 `automatic_retry_allowed` is a policy hint for callers, not an automatic retry
-performed by this server. Its defaults are `true` for `UPSTREAM_TIMEOUT` and
-`UPSTREAM_CONNECTION_ERROR`, and `false` for all other codes above (including
-challenges, invalid payloads/URNs, CTS errors, HTTP errors, and oversized bodies).
-HTTP errors default to false because that code includes both permanent 4xx and
-transient 5xx failures; callers should inspect the status and respect any
-rate-limit guidance before retrying.
+performed by this server. Its defaults are `true` for `UPSTREAM_TIMEOUT`,
+`UPSTREAM_CONNECTION_ERROR`, and `UPSTREAM_HTTP_ERROR` with status 429 or 500–599.
+Other HTTP statuses and all other codes above default to `false` (including
+challenges, invalid payloads/URNs, CTS errors, and oversized bodies).
+
+HTTP error JSON includes `retry_after_seconds`, a nonnegative integer parsed
+from `Retry-After`, or `null` if the header is absent or invalid. Both integer
+seconds and HTTP dates are supported; dates are converted to seconds using the
+local UTC clock, rounded up, and clamped to zero if already past. Callers should
+wait at least this long before retrying. A `null` value supplies no delay advice;
+it does not mean retry immediately. For example, a 429 with `Retry-After: 30`
+returns `automatic_retry_allowed: true` and `retry_after_seconds: 30` by default.
 
 Override individual defaults with the `PERSEUS_MCP_RETRY_POLICY` environment
 variable, containing a JSON object. For example, in an MCP configuration's
@@ -464,7 +470,10 @@ variable, containing a JSON object. For example, in an MCP configuration's
 ```
 
 Only known error codes and JSON boolean values are accepted. Omitted codes keep
-their defaults. No separate configuration file is needed. Changing this policy
+their defaults. An explicit `UPSTREAM_HTTP_ERROR` override takes precedence over
+the status-based defaults for every HTTP status; setting it to `false` disables
+retry permission even for 429 and 5xx while preserving `retry_after_seconds`.
+No separate configuration file is needed. Changing this policy
 does not enable server-side retries or navigation/label fallbacks for challenges.
 
 | Problem | What to check |
