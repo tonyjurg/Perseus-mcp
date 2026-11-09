@@ -203,7 +203,7 @@ def _max_response_bytes() -> int:
 
 
 def _body_timeout_seconds() -> float:
-    value = os.environ.get("PERSEUS_MCP_BODY_TIMEOUT_SECONDS", "20")
+    value = os.environ.get("PERSEUS_MCP_BODY_TIMEOUT_SECONDS", "60")
     try:
         timeout = float(value)
     except ValueError:
