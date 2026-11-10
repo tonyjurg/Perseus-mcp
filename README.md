@@ -550,7 +550,7 @@ See `docs/contributing.md` for contribution guidance.
 
 ## Responsible disclosure
 
-This project was created with assistance from OpenAI Codex. The human
+This project was created with assistance from OpenAI Codex and Claude. The human
 maintainer remains responsible for reviewing, testing, and accepting all code
 and documentation changes.
 
