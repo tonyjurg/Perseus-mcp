@@ -31,6 +31,7 @@ DEFAULT_RETRY_POLICY = {
 
 @lru_cache(maxsize=8)
 def _retry_policy(configuration: str) -> dict[str, bool]:
+    """Parse and cache retry overrides, rejecting unknown codes and non-boolean values."""
     policy = {}
     if configuration:
         try:
@@ -54,6 +55,7 @@ def validate_retry_policy() -> None:
 
 
 def retry_allowed(code: str, status: int | None = None) -> bool:
+    """Return the configured retry hint, otherwise using error-code and HTTP-status defaults."""
     overrides = _retry_policy(os.environ.get("PERSEUS_MCP_RETRY_POLICY", ""))
     if code in overrides:
         return overrides[code]
@@ -95,6 +97,7 @@ class UpstreamFailure(Exception):
         *,
         retry_after_seconds: int | None = None,
     ):
+        """Initialize the error details used in the public JSON payload."""
         self.code = code
         self.message = message
         self.status = status
@@ -102,6 +105,7 @@ class UpstreamFailure(Exception):
         super().__init__(f"{code}: {message}")
 
     def as_json(self) -> str:
+        """Serialize the safe error code, message, HTTP status, delay, and retry hint."""
         return json.dumps(
             {
                 "code": self.code,
@@ -114,12 +118,16 @@ class UpstreamFailure(Exception):
 
 
 class _PageMarkers(HTMLParser):
+    """Recognize HTML documents and Anubis challenge markers without rendering them."""
+
     def __init__(self):
+        """Initialize empty page and challenge markers."""
         super().__init__()
         self.challenge = False
         self.html = False
 
     def handle_starttag(self, tag, attrs):
+        """Record HTML and challenge indicators from an opening tag and its attributes."""
         values = dict(attrs)
         if tag in {"html", "head", "body"}:
             self.html = True
@@ -134,6 +142,7 @@ class _PageMarkers(HTMLParser):
 
 def reject_challenge(text: str, status: int | None = None) -> None:
     # JSON may legitimately contain HTML excerpts: do not parse those as pages.
+    """Raise UPSTREAM_CHALLENGE when an HTML/XML prefix contains Anubis markers."""
     prefix = text.lstrip("\ufeff \t\r\n")[:65536]
     if not prefix.startswith("<"):
         return
@@ -149,12 +158,14 @@ def reject_challenge(text: str, status: int | None = None) -> None:
 
 
 def _invalid() -> None:
+    """Raise a safe INVALID_PAYLOAD failure without including upstream response content."""
     raise UpstreamFailure(
         "INVALID_PAYLOAD", "The upstream response has an unexpected format."
     )
 
 
 def validate_text(text: str) -> None:
+    """Reject access challenges and HTML pages where plaintext is expected."""
     reject_challenge(text)
     prefix = text.lstrip("\ufeff \t\r\n")[:65536]
     page = _PageMarkers()
@@ -165,6 +176,7 @@ def validate_text(text: str) -> None:
 
 
 def _json(text: str) -> Any:
+    """Decode JSON after challenge detection, mapping parse failures to INVALID_PAYLOAD."""
     reject_challenge(text)
     try:
         return json.loads(text)
@@ -173,10 +185,12 @@ def _json(text: str) -> Any:
 
 
 def _objects(value: Any) -> bool:
+    """Return whether a value is a list containing only JSON objects."""
     return isinstance(value, list) and all(isinstance(item, dict) for item in value)
 
 
 def validate_search(text: str) -> None:
+    """Validate Scaife search result shapes and nonnegative pagination counters."""
     data = _json(text)
     # Both shapes are supported by the existing author-scope filter.
     if _objects(data):
@@ -192,6 +206,7 @@ def validate_search(text: str) -> None:
 
 
 def validate_catalogue(text: str) -> None:
+    """Validate Scaife textgroup catalogue JSON and reject embedded errors."""
     data = _json(text)
     if not isinstance(data, dict) or not _objects(data.get("text_groups")):
         _invalid()
@@ -200,6 +215,7 @@ def validate_catalogue(text: str) -> None:
 
 
 def validate_metadata(text: str) -> None:
+    """Require a CTS URN in Scaife metadata JSON and reject embedded errors."""
     data = _json(text)
     if not isinstance(data, dict) or not isinstance(data.get("urn"), str):
         _invalid()
@@ -212,6 +228,7 @@ def validate_metadata(text: str) -> None:
 
 
 def validate_passage_json(text: str) -> None:
+    """Validate Scaife passage metadata and require a string text_html field."""
     validate_metadata(text)
     data = _json(text)
     if not isinstance(data.get("text_html"), str):
@@ -219,6 +236,19 @@ def validate_passage_json(text: str) -> None:
 
 
 def validate_cts(text: str, request: str) -> None:
+    """Validate a CTS operation by local root name, independent of its namespace.
+
+    Args:
+        text: Upstream XML response, or an upstream error body.
+        request: Expected CTS operation such as GetPassage or GetCapabilities.
+
+    Raises:
+        UpstreamFailure: For challenges, invalid URNs, CTS errors, malformed XML,
+            or an unexpected root. Error messages never include response bodies.
+
+    Accepts TEI passage roots, TextInventory capabilities, and GetPassage
+    envelopes returned for GetPassagePlus.
+    """
     reject_challenge(text)
     if re.match(r"(?i)^\s*invalid\s+urn\b", text):
         raise UpstreamFailure(

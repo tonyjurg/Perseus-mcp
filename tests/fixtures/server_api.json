@@ -1,0 +1,875 @@
+{
+  "get_passage": {
+    "schema": {
+      "description": "Get the text of a specific passage using a CTS URN.\n\nExamples:\n- urn:cts:greekLit:tlg0012.tlg001:1.1-1.10\n- urn:cts:greekLit:tlg0012.tlg001.perseus-grc1:1.1",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_passage_plus": {
+    "schema": {
+      "description": "Get passage text plus surrounding metadata/context for a CTS URN.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_passage_plaintext": {
+    "schema": {
+      "description": "Get a passage as plain readable text instead of raw CTS XML.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_valid_references": {
+    "schema": {
+      "description": "Get valid citations/references for a work, useful for navigation.\n\nOptionally pass a citation `level` to constrain returned references.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str', level: 'int | None' = None) -> 'str'"
+  },
+  "get_valid_references_json": {
+    "schema": {
+      "description": "Get valid citation references as paged JSON instead of raw CTS XML.\n\n`limit` must be between 1 and 500.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str', level: 'int | None' = None, limit: 'int' = 100, offset: 'int' = 0) -> 'str'"
+  },
+  "count_valid_references": {
+    "schema": {
+      "description": "Count valid citation references without returning the full reference list.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str', level: 'int | None' = None) -> 'str'"
+  },
+  "get_capabilities": {
+    "schema": {
+      "description": "Get the list of available texts and editions from Perseus CTS.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "() -> 'str'"
+  },
+  "get_cache_status": {
+    "schema": {
+      "description": "Get local metadata cache status.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "() -> 'str'"
+  },
+  "refresh_metadata_cache": {
+    "schema": {
+      "description": "Refresh cached CTS and Scaife library metadata.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "() -> 'str'"
+  },
+  "clear_metadata_cache": {
+    "schema": {
+      "description": "Clear local metadata cache files and in-memory cache entries.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "() -> 'str'"
+  },
+  "list_text_groups": {
+    "schema": {
+      "description": "List authors/textgroups and their works from CTS capabilities.\n\nOptional `language` accepts values such as \"greek\", \"grc\", \"latin\", or\n\"lat\". Optional `query` matches author names, textgroup URNs, or work\ntitles. `limit` must be between 1 and 500. Use `offset` with `has_more`\nto page through matching textgroups.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(language: 'str | None' = None, query: 'str | None' = None, limit: 'int' = 100, offset: 'int' = 0) -> 'str'"
+  },
+  "get_author_resources": {
+    "schema": {
+      "description": "List CTS works/editions/translations for an author name or textgroup URN.\n\nExamples:\n- author: \"Homer\"\n- author: \"tlg0012\"\n- author: \"urn:cts:greekLit:tlg0012\"",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "author"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(author: 'str', language: 'str | None' = None) -> 'str'"
+  },
+  "find_author_names": {
+    "schema": {
+      "description": "Find author/textgroup names by partial name match across Perseus catalogs.\n\nThis merges the legacy CTS capabilities inventory with Scaife's library\ncatalog, then matches author/textgroup name fields only, not work titles.\nA result can therefore be found when either upstream inventory contains it.\n`limit` must be between 1 and 500. Use `offset` with `has_more` to page\nthrough all matching authors.\nExamples:\n- query: \"Hom\"\n- query: \"Plut\"",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(query: 'str', language: 'str | None' = None, limit: 'int' = 100, offset: 'int' = 0) -> 'str'"
+  },
+  "get_work_resources": {
+    "schema": {
+      "description": "List editions/translations/resources for a matching work URN or title.\n\nOptional `language` accepts values such as \"greek\", \"grc\", \"latin\", or\n\"lat\" and filters by the original work language.\n\nExamples:\n- urn_or_title: \"urn:cts:greekLit:tlg0012.tlg001\"\n- urn_or_title: \"Iliad\"",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn_or_title": {
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "urn_or_title"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn_or_title: 'str', language: 'str | None' = None) -> 'str'"
+  },
+  "get_label": {
+    "schema": {
+      "description": "Get label XML, falling back to GetPassage request metadata when needed.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_first_urn": {
+    "schema": {
+      "description": "Get the first available reference URN for a work/edition URN.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_prev_next_urn": {
+    "schema": {
+      "description": "Get previous and next URNs for a passage URN.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "search_perseus": {
+    "schema": {
+      "description": "Search Perseus texts via Scaife API.\n\nFor Greek searches, `query` may be Unicode Greek or Beta Code.  The default\n`query_format=\"auto\"` detects explicit Beta Code marks such as `=`, `/`,\n`(`, `)`, and `*`, and also accepts short unaccented Beta Code queries such\nas `logos`.  Set `query_format=\"betacode\"` to force conversion or\n`query_format=\"unicode\"` to preserve ASCII text in Greek searches.\nThe `language` value determines whether Greek query normalization is applied;\nit is not sent to Scaife as a corpus language filter.\nOptional `author` resolves a CTS author/textgroup name or URN, then locally\nfilters the current Scaife result page to matching CTS URN prefixes.\n`search_kind` may be \"form\" or \"lemma\". Set `preserve_operators=True` for\nScaife operator queries such as quoted phrases, `-`, `|`, `*`, or `~`.\nOptional `page_num`, `text_group`, `work`, and `result_format` are passed\nto Scaife's library search endpoint. When `author` resolves to exactly one\nCTS textgroup and no explicit `text_group` or `work` is supplied, the\nauthor scope is sent to Scaife as a server-side `text_group` filter.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "language": {
+            "default": "greek",
+            "type": "string"
+          },
+          "query_format": {
+            "default": "auto",
+            "type": "string"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "search_kind": {
+            "default": "form",
+            "type": "string"
+          },
+          "preserve_operators": {
+            "default": false,
+            "type": "boolean"
+          },
+          "page_num": {
+            "default": 1,
+            "type": "integer"
+          },
+          "text_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "work": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "result_format": {
+            "default": "instances",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(query: 'str', language: 'str' = 'greek', query_format: 'str' = 'auto', author: 'str | None' = None, search_kind: 'str' = 'form', preserve_operators: 'bool' = False, page_num: 'int' = 1, text_group: 'str | None' = None, work: 'str | None' = None, result_format: 'str' = 'instances') -> 'str'"
+  },
+  "search_within_text": {
+    "schema": {
+      "description": "Search within a single Scaife text/edition URN.\n\n`size` must be between 1 and 500.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "text_urn": {
+            "type": "string"
+          },
+          "language": {
+            "default": "greek",
+            "type": "string"
+          },
+          "query_format": {
+            "default": "auto",
+            "type": "string"
+          },
+          "search_kind": {
+            "default": "form",
+            "type": "string"
+          },
+          "preserve_operators": {
+            "default": false,
+            "type": "boolean"
+          },
+          "size": {
+            "default": 10,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query",
+          "text_urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(query: 'str', text_urn: 'str', language: 'str' = 'greek', query_format: 'str' = 'auto', search_kind: 'str' = 'form', preserve_operators: 'bool' = False, size: 'int' = 10, offset: 'int' = 0) -> 'str'"
+  },
+  "get_passage_highlights": {
+    "schema": {
+      "description": "Get Scaife token highlight positions for a query within one passage.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "passage_urn": {
+            "type": "string"
+          },
+          "language": {
+            "default": "greek",
+            "type": "string"
+          },
+          "query_format": {
+            "default": "auto",
+            "type": "string"
+          },
+          "search_kind": {
+            "default": "form",
+            "type": "string"
+          },
+          "preserve_operators": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query",
+          "passage_urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(query: 'str', passage_urn: 'str', language: 'str' = 'greek', query_format: 'str' = 'auto', search_kind: 'str' = 'form', preserve_operators: 'bool' = False) -> 'str'"
+  },
+  "get_scaife_library_metadata": {
+    "schema": {
+      "description": "Get Scaife JSON metadata for a textgroup, work, edition, or translation URN.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_scaife_passage_json": {
+    "schema": {
+      "description": "Get Scaife JSON passage metadata/content for a passage URN.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  },
+  "get_scaife_passage_text": {
+    "schema": {
+      "description": "Get Scaife plaintext for a passage URN.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "urn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "urn"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      }
+    },
+    "signature": "(urn: 'str') -> 'str'"
+  }
+}
