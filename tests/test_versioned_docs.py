@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts import build_api_docs as docs
 
 
@@ -57,3 +59,24 @@ def test_selector_links_resolve_from_current_and_tagged_static_directories(
             assert (output / "_static" / choice["relative_url"]).resolve() == (
                 entry["output"] / "index.html"
             ).resolve()
+
+
+def test_rendered_selector_must_exist_and_target_built_pages(tmp_path):
+    """A theme override hiding the menu or a missing release must fail the build."""
+    current = tmp_path / "api"
+    tagged = current / "versions/v1.0.2"
+    tagged.mkdir(parents=True)
+    page = current / "index.html"
+    page.write_text("<h1>API</h1>", encoding="utf-8")
+    entries = [{"output": current}, {"output": tagged}]
+    with pytest.raises(RuntimeError, match="Broken version selector"):
+        docs.verify_selector(page, entries, current)
+    page.write_text(
+        '<select><option value="index.html" selected>Current</option>'
+        '<option value="versions/v1.0.2/index.html">v1.0.2</option></select>',
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="Broken version selector"):
+        docs.verify_selector(page, entries, current)
+    (tagged / "index.html").write_text("tagged", encoding="utf-8")
+    docs.verify_selector(page, entries, current)
