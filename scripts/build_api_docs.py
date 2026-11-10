@@ -11,9 +11,41 @@ import subprocess
 import sys
 import tempfile
 import venv
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class VersionOptions(HTMLParser):
+    """Read rendered selector destinations for the deployment integrity check."""
+
+    def __init__(self):
+        """Start with no option destinations or selected version."""
+        super().__init__()
+        self.options = []
+
+    def handle_starttag(self, tag, attrs):
+        """Collect the version menu's option attributes."""
+        if tag == "option":
+            self.options.append(dict(attrs))
+
+
+def verify_selector(page: Path, entries: list, selected: Path) -> None:
+    """Reject missing menus, broken version links, and incorrect selected versions."""
+    parser = VersionOptions()
+    parser.feed(page.read_text(encoding="utf-8"))
+    expected = [(entry["output"] / "index.html").resolve() for entry in entries]
+    actual = [(page.parent / option["value"]).resolve() for option in parser.options]
+    if actual != expected or any(not target.is_file() for target in actual):
+        raise RuntimeError(f"Broken version selector in {page}")
+    selected_links = [
+        target
+        for target, option in zip(actual, parser.options, strict=True)
+        if "selected" in option
+    ]
+    if selected_links != [(selected / "index.html").resolve()]:
+        raise RuntimeError(f"Incorrect selected version in {page}")
 
 
 def git(*args: str) -> str:
@@ -158,7 +190,7 @@ def main() -> None:
             )
             (docs / "index.rst").write_text(
                 "Perseus MCP API reference\n=========================\n\n"
-                "Reference for **|docs_version|**, package version |release|.\n\n"
+                "Reference for |docs_version|, package version |release|.\n\n"
                 "This reference describes the source at the selected tag.\n\n"
                 ".. toctree::\n   :maxdepth: 2\n\n   modules\n\n"
                 "* :ref:`genindex`\n* :ref:`modindex`\n",
@@ -177,6 +209,10 @@ def main() -> None:
     for entry in entries:
         if not (entry["output"] / "index.html").is_file():
             raise RuntimeError(f"Missing documentation for {entry['label']}")
+        for name in ("index.html", "modules.html"):
+            verify_selector(entry["output"] / name, entries, entry["output"])
+        for source_page in (entry["output"] / "_modules").rglob("*.html"):
+            verify_selector(source_page, entries, entry["output"])
     (output / "versions.json").write_text(
         json.dumps(
             [

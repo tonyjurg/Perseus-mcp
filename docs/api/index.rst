@@ -1,7 +1,7 @@
 Perseus MCP API reference
 =========================
 
-Reference for **|docs_version|**, package version |release|.
+Reference for |docs_version|, package version |release|.
 Browse the modules and functions below, or select a tagged release using the
 documentation version selector.
 
