@@ -41,43 +41,11 @@ used by existing notebook/test monkeypatches. HTTP client and cache state have
 one owner, so ``server._HTTP_CLIENT`` reflects client creation and cleanup even
 when the operation was performed through ``perseus_mcp.http``.
 
-New code should import the owning modules and access dependencies through those
-modules, rather than copying function bindings. The explicit ``__all__`` lists
+Internal dependencies are accessed through their owning modules. The explicit ``__all__`` lists
 identify historical names re-exported by the facade. Private helpers remain
 available for compatibility but are implementation details. Function
-``__module__`` values now identify their implementation modules; code that
-inspects source locations should expect those paths to change.
+``__module__`` values now identify their implementation modules; source inspection reflects those implementation paths.
 
 Cache fetchers must return already validated text (production fetchers use
 ``http._get``). ``cache._cached_text`` runs ``disk_validator`` only for untrusted
 disk loads; validated memory entries and fresh fetches avoid repeated parsing.
-
-Maintaining versioned documentation
------------------------------------
-
-Install the documentation extra and build with warnings treated as errors::
-
-    python -m pip install -e ".[docs]"
-    python -m sphinx -W --keep-going -b html docs/api .cache/api-docs
-
-Open ``.cache/api-docs/index.html``. The release label comes from
-``pyproject.toml`` in the checkout, not an unrelated installed distribution.
-To rebuild a historical version, use a separate checkout/worktree of its release
-tag and run the same commands there. Documentation begins with the release
-containing this configuration; older tags have no Sphinx sources.
-
-The API documentation workflow checks pull requests and builds version-labelled
-HTML artifacts on main and ``v*`` tags. Artifact names include the source commit
-so unreleased builds sharing a package version remain distinguishable. Download
-them from GitHub Actions while retained, or rebuild from the tag afterwards.
-The Pages workflow also builds the current reference under ``/api/`` alongside
-the Jekyll guides. The homepage's API Reference card links to that published
-build; release-specific HTML remains available through the workflow artifacts.
-
-Every package module, class, and function must have a meaningful docstring.
-Use Google-style Args, Returns, and Raises sections when a signature and short
-summary do not explain the contract. Sphinx's autodoc and Napoleon extensions
-render these docstrings. Tool docstrings also become MCP descriptions, so
-changes to them are public interface changes and require updating the reviewed
-tool-contract fixture intentionally.
-

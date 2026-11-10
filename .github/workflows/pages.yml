@@ -5,17 +5,23 @@ on:
     branches:
       - main
       - master
+    tags: ["*"]
     paths:
       - docs/**
       - src/**
       - pyproject.toml
+      - scripts/build_api_docs.py
       - .github/workflows/pages.yml
   pull_request:
     paths:
       - docs/**
       - src/**
       - pyproject.toml
+      - scripts/build_api_docs.py
       - .github/workflows/pages.yml
+  release:
+    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,9 +36,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # A release/tag event must not replace Current with the tagged code.
+          ref: ${{ github.event_name == 'pull_request' && github.ref || 'main' }}
 
       - name: Configure Pages
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v6
 
       - name: Build with Jekyll
@@ -57,7 +67,7 @@ jobs:
         run: python -m pip install -e ".[docs]"
 
       - name: Build Sphinx API reference
-        run: python -m sphinx -W --keep-going -b html docs/api .cache/pages-site/api
+        run: python scripts/build_api_docs.py --output .cache/pages-site/api
 
       - name: Verify combined site
         run: |
@@ -65,13 +75,13 @@ jobs:
           test -s .cache/pages-site/api/index.html
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./.cache/pages-site
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     needs: build
     permissions:
       pages: write

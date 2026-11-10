@@ -99,13 +99,21 @@ Open `.cache/api-docs/index.html`. Use Google-style `Args`, `Returns`, and `Rais
 sections for contracts that need more than a summary. Tool docstrings also become
 MCP descriptions, so preserve them when performing structural refactors.
 
-The API documentation workflow validates these sources and uploads HTML artifacts
-named with the package version and source commit. For historical documentation,
-check out the corresponding release tag in a separate worktree and build there.
-The version label is read from that checkout's `pyproject.toml`. Release tags
-before the Sphinx configuration was added cannot use this build command.
-The Pages workflow builds the current API reference under `/api/` alongside the
-Jekyll guides, linked from the homepage's API Reference card.
+GitHub Actions builds and publishes the current codebase and every Git tag.
+The selector in the API reference switches between Current (main) and tagged
+releases. Tags without Sphinx sources get a reference generated from their own
+Python modules and docstrings; current architecture prose is not copied into
+historical references. Each tag is built in an isolated Python environment.
+
+The Pages workflow rebuilds on relevant main changes, tag pushes, published
+releases, and manual dispatch. Pull requests validate the same build without
+deploying. The complete set is published under `/api/`, with tagged references
+under `/api/versions/`. No local build or manual upload is required.
+
+For a local preview of the complete set, use
+`python scripts/build_api_docs.py --output .cache/api-docs` after fetching tags.
+Add `--current-only` for a faster preview. The build writes a `versions.json`
+manifest recording the exact source commit for each version.
 
 The documentation uses [Sphinx autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html)
 and its bundled Napoleon extension to render Python docstrings.

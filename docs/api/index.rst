@@ -1,9 +1,9 @@
 Perseus MCP API reference
 =========================
 
-This reference documents version |release| from the checked-out source tree.
-Module and function descriptions are maintained as Python docstrings alongside
-the implementation. Build a release tag to obtain the reference for that version.
+Reference for **|docs_version|**, package version |release|.
+Browse the modules and functions below, or select a tagged release using the
+documentation version selector.
 
 .. toctree::
    :maxdepth: 2
