@@ -2,13 +2,18 @@
 
 > Perseus MCP is a local FastMCP server that gives MCP-capable clients structured tools for discovering, searching, retrieving, and navigating Greek and Latin texts through the Perseus CTS and Scaife services.
 
-The project is intended for classicists, students, developers, and LLM clients. The server runs locally over stdio, requires Python 3.11 or newer, and does not require an API key for its Perseus or Scaife operations.
+The project is intended for classicists, students, developers, and LLM clients. The server runs locally over stdio, requires Python 3.11 or newer, and exposes 23 text-returning MCP tools. Perseus and Scaife operations require no API key; the optional OpenRouter notebooks require their own OpenRouter credentials.
+
+Install with `python -m pip install perseus-mcp`, then launch `perseus-mcp` or `python -m perseus_mcp`. From a repository checkout, use `uv sync` followed by `uv run perseus-mcp`.
 
 ## Documentation
 
 - [Documentation home](https://tonyjurg.github.io/Perseus-mcp/): Project overview, documentation map, quick-start commands, and responsible-disclosure note.
 - [End-user guide](https://tonyjurg.github.io/Perseus-mcp/enduser/): Installation, MCP client configuration, available tools, prompting workflow, URN guidance, cache behavior, and troubleshooting.
 - [Architecture](https://tonyjurg.github.io/Perseus-mcp/architecture/): Internal design, FastMCP rationale, upstream services, request flow, caching, query normalization, data contracts, fallbacks, and extension points.
+- [Sphinx API reference](https://tonyjurg.github.io/Perseus-mcp/api/): Version-labelled documentation generated from module, class, and function docstrings, published alongside the guides.
+- [API modules](https://tonyjurg.github.io/Perseus-mcp/api/modules.html): Function signatures and contracts for the implementation modules and all MCP tools.
+- [Module layout and compatibility](https://tonyjurg.github.io/Perseus-mcp/api/architecture.html): Module responsibilities, backward-compatible notebook imports, cache validation contracts, and instructions for building documentation from release tags.
 - [Example notebooks](https://tonyjurg.github.io/Perseus-mcp/notebooks/): Guided examples covering CTS access, MCP calls, Greek and Latin research, search and navigation, cache controls, and optional OpenRouter integration.
 - [Contributing](https://tonyjurg.github.io/Perseus-mcp/contributing/): Bug reports, feature requests, development setup, pull-request expectations, documentation changes, and credential safety.
 - [License](https://tonyjurg.github.io/Perseus-mcp/license/): MIT License terms.
@@ -17,7 +22,12 @@ The project is intended for classicists, students, developers, and LLM clients. 
 
 - [GitHub repository](https://github.com/tonyjurg/Perseus-mcp): Source code, README, tests, notebooks, issues, and releases.
 - [README](https://github.com/tonyjurg/Perseus-mcp/blob/main/README.md): Repository-level overview, installation instructions, tool catalog, examples, and client configuration.
-- [Python server](https://github.com/tonyjurg/Perseus-mcp/blob/main/src/perseus_mcp/server.py): FastMCP server implementation and tool definitions.
+- [Python package](https://github.com/tonyjurg/Perseus-mcp/tree/main/src/perseus_mcp): Focused HTTP, cache, CTS, Scaife, Greek normalization, discovery, and upstream-validation modules.
+- [Server compatibility layer](https://github.com/tonyjurg/Perseus-mcp/blob/main/src/perseus_mcp/server.py): CLI startup and legacy imports. Existing notebooks can still use `from perseus_mcp import server`, `server.mcp`, and direct tool calls.
+- [MCP tool implementations](https://github.com/tonyjurg/Perseus-mcp/tree/main/src/perseus_mcp/tools): Tool functions grouped into CTS, discovery, search, Scaife retrieval, and cache modules.
+- [Upstream validation and errors](https://github.com/tonyjurg/Perseus-mcp/blob/main/src/perseus_mcp/upstream.py): Payload validation, structured errors, bounded Retry-After parsing, and retry-policy hints.
+- [API documentation builds](https://github.com/tonyjurg/Perseus-mcp/actions/workflows/api-docs.yml): HTML artifacts identified by package version and source commit, including release-tag builds. The published reference follows main; historical builds can be reproduced from tags containing the Sphinx configuration.
+- [Live CTS format monitor](https://github.com/tonyjurg/Perseus-mcp/actions/workflows/cts-upstream-monitor.yml): Advisory checks every Monday at 05:23 UTC, also runnable manually. Root/namespace changes and invalid payloads fail the check; challenges, timeouts, and other availability failures are inconclusive.
 - [Example notebooks on GitHub](https://github.com/tonyjurg/Perseus-mcp/tree/main/examples): Executable research and integration examples.
 - [Issue tracker](https://github.com/tonyjurg/Perseus-mcp/issues): Bug reports, documentation issues, feature requests, and upstream service problems.
 
@@ -28,6 +38,35 @@ The project is intended for classicists, students, developers, and LLM clients. 
 3. Discover an author, work, or CTS URN with the resource-discovery tools.
 4. Retrieve plaintext or raw CTS XML, search Scaife, or navigate adjacent passages.
 5. Verify important claims against the returned URNs and upstream source data.
+
+## Tools and response formats
+
+- CTS passages: `get_passage`, `get_passage_plus` return XML; `get_passage_plaintext` returns readable text.
+- References and navigation: `get_valid_references`, `get_valid_references_json`, `count_valid_references`, `get_first_urn`, `get_prev_next_urn`, `get_label`. Reference listing/counting helpers return JSON; raw references, navigation, and labels return XML.
+- Inventory and discovery: `get_capabilities` returns CTS XML; `list_text_groups`, `find_author_names`, `get_author_resources`, `get_work_resources` return locally shaped JSON. Author-name discovery merges CTS and Scaife inventories.
+- Search: `search_perseus`, `search_within_text`, `get_passage_highlights` return Scaife JSON, with optional author-scope metadata/filtering for corpus searches.
+- Scaife retrieval: `get_scaife_library_metadata`, `get_scaife_passage_json` return JSON; `get_scaife_passage_text` returns plaintext.
+- Cache management: `get_cache_status`, `refresh_metadata_cache`, `clear_metadata_cache` return JSON summaries.
+
+JSON and XML are returned as text payloads. Use the API reference for exact signatures and defaults. Paginated discovery/reference tools use `limit`, `offset`, `total_count`, `returned_count`, and `has_more`; limits are 1–500. `search_within_text` uses `size` (1–500) and `offset`; corpus search uses `page_num`.
+
+## Search and fallback behavior
+
+Greek queries accept Unicode or Beta Code through `query_format="auto"`, `"betacode"`, or `"unicode"`. Choose an explicit format for ambiguous ASCII input. Set `preserve_operators=True` for quoted phrases and search operators. `search_kind` accepts `"form"` or `"lemma"`.
+
+For search tools, `language` controls query normalization, not corpus filtering. Use `text_group`, `work`, or a resolved `author` to scope corpus searches. A unique author match can become a server-side textgroup filter; otherwise author filtering applies only to the returned page. Inventory-discovery language filters apply to the original work language.
+
+Navigation tools can fall back to `GetValidReff` on malformed payloads or CTS service errors. `get_label` can derive available labels from GetPassage request metadata and marks the generated reply's source. These fallbacks never bypass access challenges or invent missing metadata. CTS validation matches local root names rather than a fixed namespace allow-list; the live monitor separately checks namespace drift.
+
+## Caching, limits, and error handling
+
+CTS capabilities, valid references, and the Scaife library catalogue are cached in memory and on disk. The default directory is `.cache/perseus-mcp` relative to the working directory, with a 24-hour TTL. Set `PERSEUS_MCP_CACHE_DIR` to share an absolute cache directory, `PERSEUS_MCP_CACHE_TTL_SECONDS` to change expiry (zero means no expiry), or `PERSEUS_MCP_DISABLE_CACHE=1` to disable caching. Fetchers validate upstream responses; disk entries are validated on load. Memory hits avoid repeated validation.
+
+Responses are streamed with a default 16 MiB decoded-body limit (`PERSEUS_MCP_MAX_RESPONSE_BYTES`) and a 60-second total body-read deadline (`PERSEUS_MCP_BODY_TIMEOUT_SECONDS`). The body deadline starts after final response headers; separate HTTPX per-operation timeouts still apply. Failed or partial fetches are not cached.
+
+Expected upstream failures become MCP tool errors containing JSON fields `code`, `message`, `upstream_http_status`, `retry_after_seconds`, and `automatic_retry_allowed`. Codes include `UPSTREAM_CHALLENGE`, `INVALID_PAYLOAD`, `INVALID_URN`, `UPSTREAM_CTS_ERROR`, `UPSTREAM_HTTP_ERROR`, `UPSTREAM_TIMEOUT`, `UPSTREAM_CONNECTION_ERROR`, `UPSTREAM_TRANSPORT_ERROR`, and `UPSTREAM_RESPONSE_TOO_LARGE`. Do not treat an error or challenge page as textual evidence or an empty search result.
+
+The server does not retry automatically. By default, retry hints permit timeouts, connection errors, and HTTP statuses 429, 500, 502, 503, and 504. Other errors default to non-retryable. `retry_after_seconds` is parsed from HTTP Retry-After guidance and capped at 3,600 seconds; `null` means no delay guidance, not permission to retry immediately. `PERSEUS_MCP_RETRY_POLICY` accepts a JSON object mapping known error codes to boolean overrides. Retry policy, body-size limit, and body deadline are validated at CLI startup.
 
 ## Scope and data sources
 
