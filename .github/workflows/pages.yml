@@ -41,6 +41,12 @@ jobs:
           source: ./docs
           destination: ./_site
 
+      - name: Prepare writable combined site
+        # The Jekyll container owns _site; copy its contents as the runner user.
+        run: |
+          mkdir -p .cache/pages-site
+          cp -R _site/. .cache/pages-site/
+
       - name: Set up Python for API documentation
         uses: actions/setup-python@v7
         with:
@@ -51,13 +57,18 @@ jobs:
         run: python -m pip install -e ".[docs]"
 
       - name: Build Sphinx API reference
-        run: python -m sphinx -W --keep-going -b html docs/api _site/api
+        run: python -m sphinx -W --keep-going -b html docs/api .cache/pages-site/api
+
+      - name: Verify combined site
+        run: |
+          test -s .cache/pages-site/index.html
+          test -s .cache/pages-site/api/index.html
 
       - name: Upload Pages artifact
         if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./_site
+          path: ./.cache/pages-site
 
   deploy:
     if: github.event_name == 'push'
