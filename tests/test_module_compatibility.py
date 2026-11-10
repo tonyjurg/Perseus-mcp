@@ -30,7 +30,7 @@ def test_tool_contract_matches_monolithic_server():
         return {
             tool.name: {
                 "schema": {
-                    key: tool.model_dump(mode="json")[key]
+                    key: tool.model_dump(mode="json", by_alias=True)[key]
                     for key in ("description", "inputSchema", "outputSchema")
                 },
                 "signature": str(inspect.signature(getattr(server, tool.name))),
@@ -48,7 +48,7 @@ def test_legacy_imports_share_functions_and_state(monkeypatch):
 
     assert get_passage is implementation
     assert _normalize_query_for_search is greek._normalize_query_for_search
-    assert _normalize_query_for_search("lo/gos") == "Î»ÏŒÎ³Î¿Ï‚"
+    assert _normalize_query_for_search("lo/gos") == "\u03bb\u03cc\u03b3\u03bf\u03c2"
     assert server._MEMORY_CACHE is cache._MEMORY_CACHE
     client_marker = object()
     monkeypatch.setattr(server, "_HTTP_CLIENT", client_marker)
