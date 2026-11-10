@@ -5,6 +5,10 @@ url: https://tonyjurg.github.io
 baseurl: /Perseus-mcp
 github_url: https://github.com/tonyjurg/Perseus-mcp
 
+# Sphinx builds the API reference separately after Jekyll.
+exclude:
+  - api
+
 plugins:
   - jekyll-seo-tag
 

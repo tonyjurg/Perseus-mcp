@@ -104,7 +104,8 @@ named with the package version and source commit. For historical documentation,
 check out the corresponding release tag in a separate worktree and build there.
 The version label is read from that checkout's `pyproject.toml`. Release tags
 before the Sphinx configuration was added cannot use this build command.
-The existing Jekyll documentation deployment is unchanged.
+The Pages workflow builds the current API reference under `/api/` alongside the
+Jekyll guides, linked from the homepage's API Reference card.
 
 The documentation uses [Sphinx autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html)
 and its bundled Napoleon extension to render Python docstrings.
