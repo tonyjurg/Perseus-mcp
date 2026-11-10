@@ -70,7 +70,9 @@ The API documentation workflow checks pull requests and builds version-labelled
 HTML artifacts on main and ``v*`` tags. Artifact names include the source commit
 so unreleased builds sharing a package version remain distinguishable. Download
 them from GitHub Actions while retained, or rebuild from the tag afterwards.
-This does not replace or deploy over the existing Jekyll documentation site.
+The Pages workflow also builds the current reference under ``/api/`` alongside
+the Jekyll guides. The homepage's API Reference card links to that published
+build; release-specific HTML remains available through the workflow artifacts.
 
 Every package module, class, and function must have a meaningful docstring.
 Use Google-style Args, Returns, and Raises sections when a signature and short
