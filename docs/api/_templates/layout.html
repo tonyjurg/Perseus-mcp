@@ -1,0 +1,19 @@
+{% extends "!layout.html" %}
+{% block body %}
+{% if docs_versions %}
+<nav class="version-picker" aria-label="Documentation version">
+  <label for="docs-version">Version</label>
+  <select id="docs-version" onchange="window.location.href = this.value;">
+    {% for entry in docs_versions %}
+    <option value="{{ pathto('_static', 1) }}/{{ entry.relative_url }}"{% if entry.label == docs_version %} selected{% endif %}>{{ entry.label }}</option>
+    {% endfor %}
+  </select>
+  <noscript>
+    {% for entry in docs_versions %}
+    <a href="{{ pathto('_static', 1) }}/{{ entry.relative_url }}">{{ entry.label }}</a>
+    {% endfor %}
+  </noscript>
+</nav>
+{% endif %}
+{{ super() }}
+{% endblock %}
