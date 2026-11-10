@@ -12,7 +12,8 @@ This document explains internal design, request flow, and extension points for t
 
 The server is a single-process Python MCP tool host built with FastMCP:
 
-- **Implementation**: `src/perseus_mcp/server.py`
+- **Compatibility entry point**: `src/perseus_mcp/server.py`
+- **Implementation**: focused modules under `src/perseus_mcp/` and `tools/`
 - **Installed entry points**: `perseus-mcp` and `python -m perseus_mcp`
 - **MCP host**: `mcp = FastMCP("perseus")`
 - **Transport/runtime**: provided by FastMCP when calling `mcp.run()`
@@ -20,6 +21,27 @@ The server is a single-process Python MCP tool host built with FastMCP:
 All tool functions are async and return text payloads. Many are raw upstream
 responses, while discovery, plaintext, and navigation fallback tools shape
 responses locally.
+
+## Module layout and API reference
+
+`server.py` preserves the notebook imports and CLI while forwarding to focused
+modules: `http.py` (transport), `cache.py` (metadata storage), `cts.py` (CTS
+requests/XML), `scaife.py` (URLs and search filtering), `greek.py` (query
+normalization), and `discovery.py` (author/work inventories). MCP tools live in
+`tools/`, grouped by CTS, cache, discovery, search, and Scaife. `_app.py` owns the
+single FastMCP instance; `_common.py` contains shared normalization helpers.
+`upstream.py` continues to own payload validation and structured errors.
+
+Existing `from perseus_mcp import server` imports, `server.mcp`, direct tool
+calls, and private notebook helpers remain available. The facade also forwards
+legacy attribute assignments so existing test patches share the actual client
+and cache state. Internal modules import their owners directly, without importing
+`server.py`.
+
+The [Sphinx API sources](https://github.com/tonyjurg/Perseus-mcp/tree/main/docs/api) document every implementation module
+and function. See [Contributing](../contributing/) for build instructions. The
+API documentation workflow builds HTML labelled with the package version and
+source commit, including release-tag builds.
 
 ## Architecture Goals and Tradeoffs
 

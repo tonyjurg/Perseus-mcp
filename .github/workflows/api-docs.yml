@@ -1,0 +1,43 @@
+name: Build API documentation
+
+on:
+  pull_request:
+    paths:
+      - src/**
+      - docs/api/**
+      - pyproject.toml
+      - .github/workflows/api-docs.yml
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install -e ".[docs]"
+      - run: python -m sphinx -W --keep-going -b html docs/api .cache/api-docs
+      - name: Read package version
+        id: version
+        shell: python
+        run: |
+          import os
+          import tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"version={version}", file=output)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: api-docs-${{ steps.version.outputs.version }}-${{ github.sha }}
+          path: .cache/api-docs/
+

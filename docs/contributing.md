@@ -84,3 +84,27 @@ CI blocks pull requests and direct pushes to `main` or `development` that
 contain an OpenRouter key-like token matching
 `sk-or-v1-[A-Za-z0-9_-]{20,}` in tracked files. Feature branches run the same
 checks through their pull request without duplicating the workflow on push.
+
+## API documentation
+
+Module, class, and function docstrings live beside the implementation. Build the
+Sphinx reference locally with:
+
+```bash
+python -m pip install -e ".[docs]"
+python -m sphinx -W --keep-going -b html docs/api .cache/api-docs
+```
+
+Open `.cache/api-docs/index.html`. Use Google-style `Args`, `Returns`, and `Raises`
+sections for contracts that need more than a summary. Tool docstrings also become
+MCP descriptions, so preserve them when performing structural refactors.
+
+The API documentation workflow validates these sources and uploads HTML artifacts
+named with the package version and source commit. For historical documentation,
+check out the corresponding release tag in a separate worktree and build there.
+The version label is read from that checkout's `pyproject.toml`. Release tags
+before the Sphinx configuration was added cannot use this build command.
+The existing Jekyll documentation deployment is unchanged.
+
+The documentation uses [Sphinx autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html)
+and its bundled Napoleon extension to render Python docstrings.

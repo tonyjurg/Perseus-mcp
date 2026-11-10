@@ -37,6 +37,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+docs = [
+  "sphinx>=8.2,<9",
+]
 dev = [
   "build>=1.2",
   "pytest>=8.0",
