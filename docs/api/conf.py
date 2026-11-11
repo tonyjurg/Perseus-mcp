@@ -18,12 +18,22 @@ version = release
 extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "sphinx.ext.viewcode"]
 autodoc_member_order = "bysource"
 autodoc_typehints = "description"
-html_theme = "alabaster"
+html_theme = "sphinx_rtd_theme"
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": 2,
+    "sticky_navigation": True,
+    "titles_only": True,
+    "style_nav_header_background": "#20394b",
+    "logo_only": True,
+}
+html_logo = "_static/perseus-logo.png"
+html_favicon = "_static/perseus-logo.png"
 docs_version = os.environ.get("PERSEUS_DOCS_VERSION", "Current (main)")
 html_title = f"{project} — {docs_version}"
 templates_path = ["_templates"]
 html_static_path = ["_static"]
-html_css_files = ["versions.css"]
+html_css_files = ["perseus.css"]
 html_context = {
     "docs_version": docs_version,
     "docs_versions": json.loads(os.environ.get("PERSEUS_DOCS_VERSIONS", "[]")),
