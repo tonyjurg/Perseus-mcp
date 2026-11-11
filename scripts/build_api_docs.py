@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 import venv
 from html.parser import HTMLParser
 from pathlib import Path
@@ -129,6 +130,9 @@ def main() -> None:
         help="Build a quick preview without release tags.",
     )
     args = parser.parse_args()
+    docs_dependencies = tomllib.loads(
+        (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["optional-dependencies"]["docs"]
     output = args.output.resolve()
     tags = (
         []
@@ -202,7 +206,7 @@ def main() -> None:
                 "Scripts/python.exe" if os.name == "nt" else "bin/python"
             )
             subprocess.run(
-                [str(python), "-m", "pip", "install", str(source), "sphinx>=8.2,<9"],
+                [str(python), "-m", "pip", "install", str(source), *docs_dependencies],
                 check=True,
             )
             build(source, docs, entry["output"], python, entry["label"], entries)

@@ -1,5 +1,10 @@
 {% extends "!layout.html" %}
-{% block relbar1 %}
+{% block sidebartitle %}
+<a class="perseus-brand" href="{{ pathto('index') }}">
+  <img src="{{ pathto('_static/perseus-logo.png', 1) }}" alt="Perseus MCP documentation" />
+</a>
+<p class="brand-caption">API reference</p>
+{% include "searchbox.html" %}
 {% if docs_versions %}
 <nav class="version-picker" aria-label="Documentation version">
   <label for="docs-version">Version</label>
@@ -15,5 +20,19 @@
   </noscript>
 </nav>
 {% endif %}
+{% endblock %}
+
+{% block navigation %}
 {{ super() }}
+<div class="project-links">
+  <a href="https://tonyjurg.github.io/Perseus-mcp/">Documentation home <span aria-hidden="true">↗</span></a>
+  <a href="https://github.com/tonyjurg/Perseus-mcp">GitHub repository <span aria-hidden="true">↗</span></a>
+</div>
+{% endblock %}
+
+{% block mobile_nav %}
+<button type="button" data-toggle="wy-nav-top" class="menu-toggle" aria-label="Open navigation">
+  <span class="fa fa-bars" aria-hidden="true"></span>
+</button>
+<a href="{{ pathto('index') }}">Perseus MCP</a>
 {% endblock %}
