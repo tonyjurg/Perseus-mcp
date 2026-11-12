@@ -148,8 +148,7 @@ Or with `pip`:
 pip install -e .
 ```
 
-Once a release is published to PyPI, users can install it without cloning the
-repository:
+Since the package is also published to PyPI, users can install it without cloning the repository by using pip:
 
 ```bash
 pip install perseus-mcp
