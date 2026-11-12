@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import textwrap
 import tomllib
+from pathlib import Path
 
 
 def main():
@@ -27,8 +27,6 @@ def main():
         "--live", action="store_true", help="Also check live Perseus passage retrieval"
     )
     args = parser.parse_args()
-    if sys.version_info < (3, 11):
-        parser.error("Python 3.11 or newer is required")
     REPO = next(
         (
             p
@@ -104,6 +102,7 @@ def main():
             )
             result = subprocess.run(
                 [str(PYTHON), *args],
+                check=False,
                 cwd=CHECKOUT,
                 env=ENV,
                 text=True,
