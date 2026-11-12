@@ -74,6 +74,27 @@ Keep pull requests narrowly scoped. A good pull request usually contains:
   implementation.
 
 
+## Release artifacts and PyPI publishing
+
+Pushing a `v*` tag runs the release artifact workflow, which builds distributions
+and attaches them to a GitHub release. Neither tag pushes nor GitHub release
+publication publishes the package to PyPI.
+
+PyPI publishing is a separate, manual action. After reviewing the release,
+dispatch `Publish to PyPI` against the intended tag, for example:
+
+```bash
+gh workflow run publish.yml --ref v1.1.0
+```
+
+Both workflows require the tag to match `v` followed by the package version in
+`pyproject.toml` exactly (for example, `v1.1.0` for version `1.1.0`). A tag such
+as `v1_1_0` is a source marker and fails this release validation.
+
+These safeguards apply to commits containing the updated workflows. Tags on
+older commits retain those commits' workflow definitions; do not push an older
+tag expecting the new manual-only publishing behavior.
+
 ## Security and Credentials
 
 Do not commit API keys, local `.env` files, notebook secrets, or private client

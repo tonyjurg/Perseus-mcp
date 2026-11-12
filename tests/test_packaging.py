@@ -217,20 +217,28 @@ def test_openrouter_notebooks_use_free_models_router_by_default() -> None:
     assert "exact model reproducibility" in analysis_content
 
 
-def test_release_workflow_builds_assets_and_dispatches_publish() -> None:
+def test_release_workflow_builds_assets_without_publishing_to_pypi() -> None:
     workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
 
     assert 'tags:\n      - "v*"' in workflow
     assert "python -m build" in workflow
     assert "python -m twine check dist/*" in workflow
     _assert_action_is_pinned(workflow, "softprops/action-gh-release")
-    assert "actions/workflows/publish.yml/dispatches" in workflow
+    assert "dispatches" not in workflow
+    assert "actions: write" not in workflow
+    assert "pypa/gh-action-pypi-publish" not in workflow
     assert 'expected_tag = f"v{version}"' in workflow
 
 
 def test_publish_workflow_uses_pypi_trusted_publishing() -> None:
     workflow = PUBLISH_WORKFLOW.read_text(encoding="utf-8")
 
+    triggers = workflow.split("on:\n", 1)[1].split("\njobs:", 1)[0]
+    trigger_lines = [
+        line.strip() for line in triggers.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    assert trigger_lines == ["workflow_dispatch:"]
     assert "environment: pypi" in workflow
     assert "id-token: write" in workflow
     _assert_action_is_pinned(workflow, "pypa/gh-action-pypi-publish")
