@@ -5,6 +5,35 @@ deterministic, and how GitHub Actions automates verification. The repository
 README provides the public overview; this file is the maintainer reference
 stored alongside the tests themselves.
 
+## Run regression checks for a branch or tag
+
+Open `tests/ref_regression.ipynb` and set `REF` to `main`, `v1_1_0`, or
+another local Git ref. Alternatively, from the repository root run:
+
+```bash
+python tests/run_ref_regression.py --ref main
+python tests/run_ref_regression.py --ref v1_1_0
+```
+
+The runner requires Python 3.11+ and Git. It resolves the ref to a commit,
+creates a temporary clone and virtual environment, installs that commit with
+its development dependencies, verifies the imported source and MCP connection,
+and runs that commit's full test suite. It exits unsuccessfully on a failed
+check or timeout and removes its temporary files on exit. Uncommitted edits
+are excluded. It never pushes a ref or publishes a package.
+
+Dependency installation needs access to your configured package index and uses
+the selected commit's dependency constraints, not a lockfile. `main` is local
+main; `origin/main` is the last fetched remote main. Fetch separately if needed.
+Use `--focused` for compatibility, Greek normalization, recorded CTS fixtures,
+and packaging checks only. Use `--live` to additionally retrieve one passage
+from Perseus; this may fail due to upstream availability or rate limiting.
+Older refs without the expected MCP API or test files fail explicitly.
+
+The runner itself comes from your working checkout; package code, fixtures,
+and regression tests come from the selected commit. Passing this suite does
+not constitute an end-to-end execution of every example notebook or LLM call.
+
 ## Test Layers
 
 Perseus MCP uses several complementary verification layers:

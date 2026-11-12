@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.metadata
 import importlib.util
 import json
@@ -57,6 +58,35 @@ def test_pyproject_uses_src_layout_and_declares_build_tools() -> None:
     assert {"build>=1.2", "ruff>=0.16.2,<0.18", "twine>=6.0"} <= set(
         configuration["project"]["optional-dependencies"]["dev"]
     )
+
+
+def test_release_versions_are_consistent() -> None:
+    """Keep package, fallback, MCP manifest, and citation versions aligned."""
+    expected = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"][
+        "version"
+    ]
+    assert (
+        json.loads((REPO_ROOT / "server.json").read_text(encoding="utf-8"))["version"]
+        == expected
+    )
+    citation = (REPO_ROOT / "CITATION.cff").read_text(encoding="utf-8")
+    assert (
+        re.search(r'^version: "([^"]+)"$', citation, re.MULTILINE).group(1) == expected
+    )
+    tree = ast.parse(
+        (REPO_ROOT / "src/perseus_mcp/__init__.py").read_text(encoding="utf-8")
+    )
+    fallback_versions = [
+        node.value.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and isinstance(node.value, ast.Constant)
+        and any(
+            isinstance(target, ast.Name) and target.id == "__version__"
+            for target in node.targets
+        )
+    ]
+    assert fallback_versions == [expected]
 
 
 def test_core_dependencies_are_actually_used_by_the_package() -> None:
@@ -235,7 +265,8 @@ def test_publish_workflow_uses_pypi_trusted_publishing() -> None:
 
     triggers = workflow.split("on:\n", 1)[1].split("\njobs:", 1)[0]
     trigger_lines = [
-        line.strip() for line in triggers.splitlines()
+        line.strip()
+        for line in triggers.splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
     assert trigger_lines == ["workflow_dispatch:"]
