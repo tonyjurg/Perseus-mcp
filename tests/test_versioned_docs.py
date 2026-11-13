@@ -1,11 +1,58 @@
 """Check historical API discovery and version-selector destinations."""
 
 import json
+from io import BytesIO
 from pathlib import Path
+from urllib.error import HTTPError
 
 import pytest
 
 from scripts import build_api_docs as docs
+
+
+def test_release_selector_uses_published_releases_across_all_pages(monkeypatch):
+    """Drafts and unpublished test tags never appear; published prereleases do."""
+    requests = []
+    draft = {"draft": True, "published_at": None, "tag_name": "v1_1_0"}
+    pages = [
+        [draft] * 99
+        + [{"draft": False, "published_at": "2026-06-01", "tag_name": "v1.0.2"}],
+        [
+            {"draft": False, "published_at": "2026-11-12", "tag_name": "v1.1.0"},
+            {
+                "draft": False,
+                "published_at": "2026-11-13",
+                "tag_name": "v1.2.0rc1",
+                "prerelease": True,
+            },
+            {"draft": False, "published_at": None, "tag_name": "unpublished"},
+        ],
+    ]
+
+    def response(request, timeout):
+        """Return two GitHub pages without using the network."""
+        requests.append(request)
+        assert timeout == 30
+        return BytesIO(json.dumps(pages[len(requests) - 1]).encode())
+
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+    monkeypatch.setattr(docs, "urlopen", response)
+    assert docs.published_release_tags() == ["v1.2.0rc1", "v1.1.0", "v1.0.2"]
+    assert requests[0].full_url.endswith("page=1")
+    assert requests[1].full_url.endswith("page=2")
+    assert requests[0].get_header("Authorization") == "Bearer test-token"
+
+
+def test_release_lookup_failure_does_not_fall_back_to_all_tags(monkeypatch):
+    """An unavailable release catalog must fail instead of publishing test tags."""
+
+    def unavailable(request, timeout):
+        """Simulate a GitHub API rate limit."""
+        raise HTTPError(request.full_url, 403, "rate limited", {}, None)
+
+    monkeypatch.setattr(docs, "urlopen", unavailable)
+    with pytest.raises(HTTPError):
+        docs.published_release_tags()
 
 
 def test_tag_directories_are_safe_and_distinct():

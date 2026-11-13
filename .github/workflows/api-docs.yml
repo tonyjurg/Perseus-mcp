@@ -10,7 +10,8 @@ on:
       - .github/workflows/api-docs.yml
   push:
     branches: [main]
-    tags: ["v*"]
+  release:
+    types: [published, edited, deleted]
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
           cache: pip
       - run: python -m pip install -e ".[docs]"
       - run: python scripts/build_api_docs.py --output .cache/api-docs
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Read package version
         id: version
         shell: python

@@ -120,20 +120,23 @@ Open `.cache/api-docs/index.html`. Use Google-style `Args`, `Returns`, and `Rais
 sections for contracts that need more than a summary. Tool docstrings also become
 MCP descriptions, so preserve them when performing structural refactors.
 
-GitHub Actions builds and publishes the current codebase and every Git tag.
+GitHub Actions builds and publishes the current codebase and published GitHub releases.
 The selector in the API reference switches between Current (main) and tagged
-releases. Tags without Sphinx sources get a reference generated from their own
+releases. Draft releases and standalone tags are excluded. Published prereleases
+are included. Releases without Sphinx sources get a reference generated from their own
 Python modules and docstrings; current architecture prose is not copied into
 historical references. Each tag is built in an isolated Python environment.
 
-The Pages workflow rebuilds on relevant main changes, tag pushes, published
-releases, and manual dispatch. Pull requests validate the same build without
+The Pages workflow rebuilds on relevant main changes, release publication,
+release edits or deletion, and manual dispatch. Tag pushes do not rebuild the site. Pull requests validate the same build without
 deploying. The complete set is published under `/api/`, with tagged references
 under `/api/versions/`. No local build or manual upload is required.
 
 For a local preview of the complete set, use
 `python scripts/build_api_docs.py --output .cache/api-docs` after fetching tags.
-Add `--current-only` for a faster preview. The build writes a `versions.json`
+The full build queries the GitHub releases API (optional `GH_TOKEN` authentication).
+An API failure stops the build rather than including arbitrary tags.
+Add `--current-only` for a faster, offline preview. The build writes a `versions.json`
 manifest recording the exact source commit for each version.
 
 The documentation uses [Sphinx autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html)

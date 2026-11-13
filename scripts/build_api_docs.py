@@ -1,4 +1,4 @@
-"""Build the current API and every tagged source revision for GitHub Pages."""
+"""Build the current API and published GitHub releases for GitHub Pages."""
 
 import argparse
 import ast
@@ -14,6 +14,7 @@ import tomllib
 import venv
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -59,6 +60,37 @@ def tag_directory(tag: str) -> str:
     if re.fullmatch(r"v?\d+(?:\.\d+)+(?:[-.][A-Za-z0-9.-]+)?", tag):
         return tag
     return "tag-" + hashlib.sha256(tag.encode()).hexdigest()[:16]
+
+
+def published_release_tags() -> list[str]:
+    """List published releases newest first; never fall back to arbitrary tags."""
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "perseus-api-docs",
+    }
+    token = os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    releases = []
+    page = 1
+    while True:
+        request = Request(
+            "https://api.github.com/repos/tonyjurg/Perseus-mcp/releases"
+            f"?per_page=100&page={page}",
+            headers=headers,
+        )
+        with urlopen(request, timeout=30) as response:
+            batch = json.load(response)
+        releases.extend(
+            release
+            for release in batch
+            if not release["draft"] and release.get("published_at")
+        )
+        if len(batch) < 100:
+            break
+        page += 1
+    releases.sort(key=lambda release: release["published_at"], reverse=True)
+    return list(dict.fromkeys(release["tag_name"] for release in releases))
 
 
 def module_reference(source: Path) -> str:
@@ -121,24 +153,20 @@ def build(
 
 
 def main() -> None:
-    """Build each tag in its own environment, then verify all published targets."""
+    """Build each release in its own environment and verify the selector targets."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path(".cache/pages-site/api"))
     parser.add_argument(
         "--current-only",
         action="store_true",
-        help="Build a quick preview without release tags.",
+        help="Build an offline preview without querying published releases.",
     )
     args = parser.parse_args()
     docs_dependencies = tomllib.loads(
         (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     )["project"]["optional-dependencies"]["docs"]
     output = args.output.resolve()
-    tags = (
-        []
-        if args.current_only
-        else git("tag", "--list", "--sort=-version:refname").splitlines()
-    )
+    tags = [] if args.current_only else published_release_tags()
     entries = [
         {
             "label": "Current (main)",
