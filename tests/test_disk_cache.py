@@ -5,9 +5,9 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from platformdirs import user_cache_path
 
 from perseus_mcp import cache, server
-from platformdirs import user_cache_path
 from perseus_mcp.server import (
     MetadataCacheWarning,
     _cached_text,
