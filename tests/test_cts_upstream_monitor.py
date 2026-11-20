@@ -49,6 +49,26 @@ def test_monitor_checks_all_manifest_urls_against_exact_roots(monkeypatch):
     ]
 
 
+def test_monitor_paces_endpoint_probes(monkeypatch):
+    calls = mock_sources(monkeypatch)
+    pauses = []
+
+    async def sleep(interval):
+        pauses.append((len(calls), interval))
+
+    monkeypatch.setattr(monitor.asyncio, "sleep", sleep)
+    asyncio.run(monitor.check_sources(MANIFEST, interval=1))
+    assert pauses == [(index, 1) for index in range(1, len(SOURCES))]
+
+
+@pytest.mark.parametrize("interval", ["-1", "nan", "inf"])
+def test_monitor_rejects_invalid_intervals(monkeypatch, interval):
+    monkeypatch.setattr(sys, "argv", ["check_cts_upstream.py", "--interval", interval])
+    with pytest.raises(SystemExit) as caught:
+        monitor.main()
+    assert caught.value.code == 2
+
+
 @pytest.mark.parametrize(
     "body,code,observed",
     [
@@ -101,7 +121,11 @@ def test_monitor_exit_code_and_saved_report(monkeypatch, tmp_path, changed):
     report = tmp_path / "report.json"
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
-    monkeypatch.setattr(sys, "argv", ["check_cts_upstream.py", "--report", str(report)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["check_cts_upstream.py", "--interval", "0", "--report", str(report)],
+    )
     assert monitor.main() == int(changed)
     saved = json.loads(report.read_text(encoding="utf-8"))
     assert len(saved["results"]) == 7
@@ -134,7 +158,11 @@ def test_inconclusive_only_run_exits_zero_and_is_not_reported_as_ok(
     monkeypatch.setattr(monitor.server, "_get", get)
     report = tmp_path / "report.json"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.md"))
-    monkeypatch.setattr(sys, "argv", ["check_cts_upstream.py", "--report", str(report)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["check_cts_upstream.py", "--interval", "0", "--report", str(report)],
+    )
     assert monitor.main() == 0
     saved = json.loads(report.read_text(encoding="utf-8"))
     assert saved["outcome"] == "inconclusive"
@@ -152,7 +180,11 @@ def test_drift_still_fails_when_another_endpoint_is_inconclusive(monkeypatch, tm
     )
     report = tmp_path / "report.json"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.md"))
-    monkeypatch.setattr(sys, "argv", ["check_cts_upstream.py", "--report", str(report)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["check_cts_upstream.py", "--interval", "0", "--report", str(report)],
+    )
     assert monitor.main() == 1
     saved = json.loads(report.read_text(encoding="utf-8"))
     assert saved["failed"] == saved["inconclusive"] == 1
@@ -237,7 +269,11 @@ def test_report_for_recorded_run_failures_through_transport(
     report = tmp_path / "report.json"
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
-    monkeypatch.setattr(sys, "argv", ["check_cts_upstream.py", "--report", str(report)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["check_cts_upstream.py", "--interval", "0", "--report", str(report)],
+    )
     with pytest.warns(monitor.server.UpstreamRateLimitWarning, match="HTTP 429"):
         assert monitor.main() == int(changed)
     saved = json.loads(report.read_text(encoding="utf-8"))

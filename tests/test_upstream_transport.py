@@ -216,6 +216,46 @@ def test_redirect_loop_is_bounded_and_typed(monkeypatch):
     assert all(stream.closed and stream.reads == 0 for stream in streams)
 
 
+@pytest.mark.parametrize(
+    "location",
+    [
+        "https://other.example/private",
+        "http://example.invalid/private",
+        "https://example.invalid:8443/private",
+        "https://user:secret@example.invalid/private",
+        "//127.0.0.1/private",
+        "https://example.invalid.evil.example/private",
+    ],
+)
+def test_unsafe_redirect_is_blocked_before_contacting_target(monkeypatch, location):
+    calls = []
+    stream = Stream([b"unread private body"])
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(302, headers={"Location": location}, stream=stream)
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+
+            async def shared():
+                return client
+
+            monkeypatch.setattr(server, "_shared_client", shared)
+            with pytest.raises(UpstreamFailure) as caught:
+                await server._get("https://example.invalid/start")
+            data = json.loads(caught.value.as_json())
+            assert data["code"] == "UPSTREAM_REDIRECT_BLOCKED"
+            assert data["upstream_http_status"] == 302
+            assert data["automatic_retry_allowed"] is False
+            assert "private" not in caught.value.as_json()
+            assert "secret" not in caught.value.as_json()
+
+    asyncio.run(run())
+    assert len(calls) == 1
+    assert stream.closed and stream.reads == 0
+
+
 @pytest.mark.parametrize("value", ["0", "-1", "unlimited"])
 def test_invalid_size_setting_fails_before_network(monkeypatch, value):
     monkeypatch.setenv("PERSEUS_MCP_MAX_RESPONSE_BYTES", value)
@@ -241,7 +281,7 @@ def test_invalid_retry_policy_is_rejected(monkeypatch, policy):
         UpstreamFailure("UPSTREAM_TIMEOUT", "safe").as_json()
 
 
-@pytest.mark.parametrize("failure", ["timeout", "size", "http"])
+@pytest.mark.parametrize("failure", ["timeout", "size", "http", "redirect"])
 def test_failed_stream_is_never_cached(monkeypatch, tmp_path, failure):
     monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(tmp_path))
     monkeypatch.delenv("PERSEUS_MCP_DISABLE_CACHE", raising=False)
@@ -256,7 +296,11 @@ def test_failed_stream_is_never_cached(monkeypatch, tmp_path, failure):
         async with httpx.AsyncClient(
             transport=httpx.MockTransport(
                 lambda r: httpx.Response(
-                    503 if failure == "http" else 200, stream=stream
+                    302 if failure == "redirect" else 503 if failure == "http" else 200,
+                    headers={"Location": "https://other.example/private"}
+                    if failure == "redirect"
+                    else {},
+                    stream=stream,
                 )
             )
         ) as client:

@@ -14,7 +14,7 @@ from .. import upstream as _upstream
 __all__ = ["get_passage_highlights", "search_perseus", "search_within_text"]
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def search_perseus(
     query: str,
     language: str = "greek",

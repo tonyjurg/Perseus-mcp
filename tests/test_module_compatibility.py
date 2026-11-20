@@ -59,6 +59,25 @@ def test_legacy_imports_share_functions_and_state(monkeypatch):
     monkeypatch.undo()
 
 
+def test_mcp_tools_advertise_cache_side_effects_and_external_access():
+    async def annotations():
+        async with Client(server.mcp) as client:
+            return {tool.name: tool.annotations for tool in await client.list_tools()}
+
+    hints = asyncio.run(annotations())
+    assert hints["get_passage"].readOnlyHint is True
+    assert hints["get_passage"].openWorldHint is True
+    assert hints["get_capabilities"].readOnlyHint is False
+    assert hints["find_author_names"].readOnlyHint is False
+    assert hints["search_perseus"].readOnlyHint is False
+    assert hints["get_cache_status"].openWorldHint is False
+    assert hints["refresh_metadata_cache"].readOnlyHint is False
+    assert hints["refresh_metadata_cache"].destructiveHint is False
+    assert hints["clear_metadata_cache"].readOnlyHint is False
+    assert hints["clear_metadata_cache"].destructiveHint is True
+    assert hints["clear_metadata_cache"].openWorldHint is False
+
+
 def test_reimport_facade_preserves_application_and_registered_tools():
     """Reloading the facade must not create another application or tool set."""
     application = server.mcp

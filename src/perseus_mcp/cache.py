@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import sys
@@ -14,6 +15,8 @@ from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
+
+from platformdirs import user_cache_path
 
 from . import _common
 from . import upstream as _upstream
@@ -44,6 +47,11 @@ DEFAULT_CACHE_TTL_SECONDS = 24 * 60 * 60
 
 
 _MEMORY_CACHE: dict[str, tuple[float, str]] = {}
+_CACHE_NAMESPACES = {
+    "capabilities": "xml",
+    "valid_reff": "xml",
+    "scaife_library": "json",
+}
 
 
 class MetadataCacheWarning(UserWarning):
@@ -71,11 +79,14 @@ def _cache_ttl_seconds() -> int:
 
 
 def _cache_dir() -> Path:
-    """Resolve the configured cache directory, defaulting to the working directory."""
-    configured = _common._normalize_space(os.environ.get("PERSEUS_MCP_CACHE_DIR"))
+    """Resolve an override or the platform's shared per-user metadata cache."""
+    configured = os.environ.get("PERSEUS_MCP_CACHE_DIR", "").strip()
     if configured:
-        return Path(configured).expanduser()
-    return Path.cwd() / ".cache" / "perseus-mcp"
+        return Path(configured).expanduser().absolute()
+    default = user_cache_path("perseus-mcp", appauthor=False)
+    # XDG cache roots should be absolute. Ignore a relative inherited root
+    # rather than silently making the default depend on the launching CWD.
+    return default if default.is_absolute() else Path.home() / ".cache" / "perseus-mcp"
 
 
 def _cache_key(parts: dict[str, Any]) -> str:
@@ -210,19 +221,19 @@ async def _cached_text(
 def _cache_status() -> str:
     """Serialize cache configuration, entry counts, and disk usage as JSON."""
     cache_dir = _cache_dir()
-    files = (
-        [path for path in cache_dir.rglob("*") if path.is_file()]
-        if cache_dir.exists()
-        else []
-    )
+    sizes = []
+    for directory, extension in _cache_namespaces(cache_dir):
+        for path in _cache_files(directory, extension):
+            with suppress(FileNotFoundError):
+                sizes.append(path.stat().st_size)
     return json.dumps(
         {
             "enabled": _cache_enabled(),
             "cache_dir": str(cache_dir),
             "ttl_seconds": _cache_ttl_seconds(),
             "memory_entries": len(_MEMORY_CACHE),
-            "disk_files": len(files),
-            "disk_bytes": sum(path.stat().st_size for path in files),
+            "disk_files": len(sizes),
+            "disk_bytes": sum(sizes),
         },
         ensure_ascii=False,
         indent=2,
@@ -274,18 +285,77 @@ def _rmtree(path: str | os.PathLike[str]) -> None:
         shutil.rmtree(path, onerror=_remove_readonly_cache_entry_legacy)
 
 
+def _is_cache_link(path: Path) -> bool:
+    """Identify symlinks and Windows reparse points without following them."""
+    info = path.lstat()
+    return stat.S_ISLNK(info.st_mode) or bool(
+        getattr(info, "st_file_attributes", 0)
+        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    )
+
+
+def _cache_namespaces(cache_dir: Path):
+    """Yield existing metadata namespaces without traversing filesystem links."""
+    try:
+        if not cache_dir.exists() or _is_cache_link(cache_dir):
+            return
+    except FileNotFoundError:
+        return
+    for name, extension in _CACHE_NAMESPACES.items():
+        directory = cache_dir / name
+        with suppress(FileNotFoundError):
+            if directory.is_dir() and not _is_cache_link(directory):
+                yield directory, extension
+
+
+def _cache_files(directory: Path, extension: str):
+    """Yield only generated cache entries and temporary files in one namespace."""
+    pattern = rf"[0-9a-f]{{64}}\.{extension}(?:\.tmp-[0-9]+-[0-9]+)?"
+    with suppress(FileNotFoundError):
+        for path in directory.iterdir():
+            if re.fullmatch(pattern, path.name):
+                with suppress(FileNotFoundError):
+                    if not _is_cache_link(path) and path.is_file():
+                        yield path
+
+
 def _clear_cache() -> str:
-    """Clear memory and remove the configured disk cache; return a JSON summary."""
+    """Clear generated metadata entries without recursively deleting user directories."""
     _MEMORY_CACHE.clear()
     cache_dir = _cache_dir()
-    removed = cache_dir.exists()
-    if removed:
-        _rmtree(cache_dir)
+    existed = cache_dir.exists()
+    files_removed = 0
+    for directory, extension in _cache_namespaces(cache_dir):
+        # Restore access only on a verified metadata namespace, never on its
+        # configured parent or on links to another directory.
+        try:
+            directory.chmod(
+                stat.S_IMODE(directory.stat().st_mode)
+                | stat.S_IRUSR
+                | stat.S_IWUSR
+                | stat.S_IXUSR
+            )
+        except FileNotFoundError:
+            continue
+        for path in _cache_files(directory, extension):
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                continue
+            except PermissionError as exc:
+                _remove_readonly_cache_entry(os.unlink, str(path), exc)
+            files_removed += 1
+        with suppress(OSError):
+            directory.rmdir()  # Only empty directories can be removed.
+    if files_removed:
+        with suppress(OSError):
+            cache_dir.rmdir()
     return json.dumps(
         {
             "cache_dir": str(cache_dir),
             "memory_entries": 0,
-            "disk_cache_removed": removed,
+            "disk_cache_removed": existed and not cache_dir.exists(),
+            "disk_files_removed": files_removed,
         },
         ensure_ascii=False,
         indent=2,

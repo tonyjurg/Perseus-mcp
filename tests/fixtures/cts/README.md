@@ -40,8 +40,12 @@ check. GitHub Actions notification preferences control failed-run notifications.
 Keep this workflow out of branch-protection required checks.
 
 Run it locally with `python scripts/check_cts_upstream.py`; use `--report PATH`
-to save the JSON report. Each endpoint is fetched once, without metadata caches
-or retries, with a 60-second total deadline and the server's response-size cap.
+to save the JSON report. The CLI spaces probes one second apart; `--interval`
+changes this delay (zero disables pacing). Each endpoint is attempted at most
+once, without metadata caches or retries, with a 60-second total deadline and
+the server's response-size cap. A 429/503 with `Retry-After` starts the transport's
+process-local cooldown; subsequent probes report the remaining delay without
+contacting the same origin until expiry.
 No response bodies are saved, and the monitor never updates the baseline or
 known-invalid fingerprints.
 Investigate failed runs and review any new captures before updating fixtures or

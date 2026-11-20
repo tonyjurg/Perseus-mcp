@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import html
 import json
+import math
 import os
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
@@ -22,9 +23,11 @@ DEFAULT_MANIFEST = (
 FORMAT_FAILURES = {"ROOT_OR_NAMESPACE_CHANGED", "INVALID_PAYLOAD"}
 
 
-async def check_sources(manifest: dict) -> list[dict]:
+async def check_sources(manifest: dict, *, interval: float = 0) -> list[dict]:
     results = []
-    for source in manifest["responses"] + manifest.get("probes", []):
+    for index, source in enumerate(manifest["responses"] + manifest.get("probes", [])):
+        if index and interval:
+            await asyncio.sleep(interval)
         result = {
             "operation": source["operation"],
             "url": source["url"],
@@ -86,9 +89,9 @@ async def check_sources(manifest: dict) -> list[dict]:
     return results
 
 
-async def run(manifest: dict) -> list[dict]:
+async def run(manifest: dict, *, interval: float = 0) -> list[dict]:
     try:
-        return await check_sources(manifest)
+        return await check_sources(manifest, interval=interval)
     finally:
         await server.aclose_http_client()
 
@@ -97,9 +100,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--report", type=Path)
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=1,
+        help="Seconds between endpoint probes (default: 1; 0 disables pacing).",
+    )
     args = parser.parse_args()
+    if not math.isfinite(args.interval) or args.interval < 0:
+        parser.error("--interval must be a nonnegative finite number")
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
-    results = asyncio.run(run(manifest))
+    results = asyncio.run(run(manifest, interval=args.interval))
     failures = sum(result["outcome"] == "failed" for result in results)
     inconclusive = sum(result["outcome"] == "inconclusive" for result in results)
     outcome = "failed" if failures else "inconclusive" if inconclusive else "ok"

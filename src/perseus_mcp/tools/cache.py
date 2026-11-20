@@ -13,13 +13,13 @@ from .. import scaife as _scaife
 __all__ = ["clear_metadata_cache", "get_cache_status", "refresh_metadata_cache"]
 
 
-@_app._upstream_tool
+@_app._upstream_tool(open_world=False)
 async def get_cache_status() -> str:
     """Get local metadata cache status."""
     return _cache._cache_status()
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def refresh_metadata_cache() -> str:
     """Refresh cached CTS and Scaife library metadata."""
     capabilities_xml, scaife_catalog_json = await asyncio.gather(
@@ -38,7 +38,7 @@ async def refresh_metadata_cache() -> str:
     )
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False, destructive=True, open_world=False)
 async def clear_metadata_cache() -> str:
     """Clear local metadata cache files and in-memory cache entries."""
     return _cache._clear_cache()
