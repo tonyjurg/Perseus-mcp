@@ -15,15 +15,17 @@ python tests/run_ref_regression.py --ref main
 python tests/run_ref_regression.py --ref v1_1_0
 ```
 
-The runner requires Python 3.11+ and Git. It resolves the ref to a commit,
+The runner requires Python 3.11+, Git, and uv 0.13.9+ for refs containing a
+lockfile. It resolves the ref to a commit,
 creates a temporary clone and virtual environment, installs that commit with
 its development dependencies, verifies the imported source and MCP connection,
 and runs that commit's full test suite. It exits unsuccessfully on a failed
 check or timeout and removes its temporary files on exit. Uncommitted edits
 are excluded. It never pushes a ref or publishes a package.
 
-Dependency installation needs access to your configured package index and uses
-the selected commit's dependency constraints, not a lockfile. `main` is local
+Dependency installation needs access to your configured package index. Refs
+with `uv.lock` use that ref's locked development dependencies; older refs use
+their own dependency constraints. `main` is local
 main; `origin/main` is the last fetched remote main. Fetch separately if needed.
 Use `--focused` for compatibility, Greek normalization, recorded CTS fixtures,
 and packaging checks only. Use `--live` to additionally retrieve one passage
@@ -134,10 +136,10 @@ the shared client must leave the global state reset.
 
 ## Running the Suite
 
-Install development dependencies:
+Install the tested development and security tools (uv 0.13.9 or later):
 
 ```bash
-python -m pip install -e ".[dev]"
+uv sync --locked --extra dev --extra security
 ```
 
 Run all tests:
@@ -185,11 +187,25 @@ truth for CI triggers, matrices, permissions, and commands.
 
 ### Tests
 
-`tests.yml` installs the editable project with development dependencies and
+`tests.yml` installs the editable project with locked development dependencies and
 runs `python -m pytest` on:
 
 - Ubuntu and Windows;
-- Python 3.11, 3.12, and 3.13.
+- Python 3.11.18, 3.12.16, and 3.13.18.
+
+Two additional jobs resolve the lowest supported direct dependencies and fresh
+highest compatible dependencies. They run the suite and audit those resolutions
+without replacing the committed lockfile. This checks both installation choices:
+the lock gives repeatability, while the published package retains compatible
+version ranges above the security floors.
+
+`dependency-audit.yml` audits the portable lock and actual installed package
+inventory against OSV, and independently reads published FastMCP advisories,
+including GHSAs without CVE IDs or OSV entries. It runs on PRs, pushes, daily,
+and as a prerequisite of release/publication jobs. The installed inventory
+excludes the editable project itself; every other package is pinned before
+auditing with dependency resolution disabled. Collection/service failures fail
+the audit. See `SECURITY.md` for local commands and provider-usage scope.
 
 The matrix sets `fail-fast: false`, allowing every job to finish when one
 combination fails. This exposes all affected platforms and versions in a single
@@ -197,10 +213,10 @@ run. Changes limited to `docs/**` do not trigger the Python test workflow.
 
 ### Package build
 
-`package.yml` uses Python 3.12 to:
+`package.yml` uses patched Python 3.12 and locked tools to:
 
-1. install `build` and `twine`;
-2. run `python -m build`;
+1. install the locked development tools;
+2. run `python -m build --no-isolation` with the locked build backend;
 3. run `python -m twine check dist/*`;
 4. upload `dist/` as the `python-package` artifact.
 

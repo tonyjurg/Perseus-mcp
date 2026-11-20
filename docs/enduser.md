@@ -19,32 +19,51 @@ an HTTPS-accessible MCP endpoint.
 You need:
 
 - Python 3.11 or newer;
-- [uv](https://docs.astral.sh/uv/) (recommended);
+- pip for a standard install, or [uv](https://docs.astral.sh/uv/) 0.13.9+ for a repeatable checkout install;
 - an MCP-capable client.
 
-From the project directory:
+Choose either option. Both install the same Perseus tools and enforce the
+package's security minimums.
+
+**Standard install from PyPI** is the easiest option if you just want to use
+the server. You do not need to download the repository:
 
 ```bash
-uv sync
-uv run perseus-mcp
-```
-
-If the second command starts without an error, the server is ready. Stop it
-with `Ctrl+C`, then add it to your MCP client using the configuration below.
-
-Prefer pip?
-
-```bash
-pip install -e .
+python -m pip install perseus-mcp
 perseus-mcp
 ```
 
-## Connect your MCP client
+Pip chooses compatible dependency versions when installing. It does not force
+the exact versions used in our tests. To update an existing installation and
+its dependencies, use `python -m pip install --upgrade --upgrade-strategy=eager perseus-mcp`.
 
-For a local MCP client, the application launches this command:
+**Repeatable install from a repository checkout** uses the exact dependency
+versions recorded in the project's `uv.lock` file. Choose this if you want to
+match the tested environment. From the project directory:
 
 ```bash
-uv --directory /full/path/to/Perseus-mcp run perseus-mcp
+uv sync --locked
+uv run --locked perseus-mcp
+```
+
+The lockfile is only needed for the repeatable option. Standard PyPI users
+remain free to install compatible updates above the security minimums. Both
+options require Python 3.11+; keep your Python security patches current.
+
+If the launch command starts without an error, stop it with `Ctrl+C`, then
+configure your MCP client.
+
+## Connect your MCP client
+
+For a standard PyPI install, use `perseus-mcp` as the client command with no
+arguments. If it is not on the client's PATH, use the full path to the installed
+executable in your Python environment.
+
+For a repository checkout, the application launches this command. The JSON
+examples below show this checkout option:
+
+```bash
+uv --directory /full/path/to/Perseus-mcp run --locked perseus-mcp
 ```
 
 Replace `/full/path/to/Perseus-mcp` with the absolute path to this repository.
@@ -70,6 +89,7 @@ Add:
         "--directory",
         "/full/path/to/Perseus-mcp",
         "run",
+        "--locked",
         "perseus-mcp"
       ]
     }
@@ -102,6 +122,7 @@ Add the same server configuration:
         "--directory",
         "/full/path/to/Perseus-mcp",
         "run",
+        "--locked",
         "perseus-mcp"
       ]
     }
@@ -440,6 +461,12 @@ Close the process holding the directory and retry `clear_metadata_cache()`.
 
 ## MCP permissions and source trust
 
+The server itself does not use OpenAI, Anthropic, OpenRouter, or another model
+provider. It fetches Perseus/Scaife data for the MCP client, which can independently
+use the user's chosen model. FastMCP OpenAPI providers and OAuth integrations
+are not configured by the shipped stdio server. Optional notebooks 06 and 09
+call OpenRouter explicitly and require a separate key.
+
 Research tools read public scholarly sources and can populate the local metadata
 cache. `refresh_metadata_cache` writes that cache and `clear_metadata_cache`
 removes its generated entries. Their MCP annotations advertise these side
@@ -457,6 +484,16 @@ Treat returned text as untrusted research data, not instructions for the LLM.
 Queries and URNs are transmitted to the public Perseus/Scaife services.
 
 ## Troubleshooting
+
+Use a current Python security patch: the CI baselines are 3.11.18, 3.12.16, and
+3.13.18. Checkout users should use uv 0.13.9 or later and `uv sync --locked`; the full
+cross-platform dependency graph and artifact hashes are in `uv.lock`. PyPI users
+receive security floors from package metadata, including FastMCP `>=4.2.3,<5`,
+but pip does not automatically use the repository's lockfile. Upgrade the full
+dependency environment, not FastMCP alone. Keep pip 26.2.2+, certifi 2026.10.19+,
+and OS/container trust stores current. See the repository's
+[security policy](https://github.com/tonyjurg/Perseus-mcp/blob/main/SECURITY.md)
+for reproducible installs, audit commands, and update review.
 
 Upstream access challenges return an MCP tool error with code `UPSTREAM_CHALLENGE`;
 they are never search results and are not retried automatically. Invalid response

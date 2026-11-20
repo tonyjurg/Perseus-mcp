@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -116,17 +117,29 @@ def main():
             result.check_returncode()
             return result
 
-        run_python(
-            [
-                "-m",
-                "pip",
-                "install",
-                "--disable-pip-version-check",
-                "-e",
-                str(CHECKOUT) + "[dev]",
-            ],
-            timeout=600,
-        )
+        if (CHECKOUT / "uv.lock").is_file():
+            uv = shutil.which("uv")
+            if uv is None:
+                raise RuntimeError("Install uv 0.13.9+ to test a ref with uv.lock")
+            subprocess.run(
+                [uv, "sync", "--locked", "--extra", "dev", "--python", sys.executable],
+                cwd=CHECKOUT,
+                env={**ENV, "UV_PROJECT_ENVIRONMENT": str(VENV)},
+                check=True,
+                timeout=600,
+            )
+        else:
+            run_python(
+                [
+                    "-m",
+                    "pip",
+                    "install",
+                    "--disable-pip-version-check",
+                    "-e",
+                    str(CHECKOUT) + "[dev]",
+                ],
+                timeout=600,
+            )
         print("PASS: tagged package installed into its own environment")
 
         SMOKE = r"""

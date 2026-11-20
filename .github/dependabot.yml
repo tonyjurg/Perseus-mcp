@@ -1,12 +1,15 @@
 version: 2
 
 updates:
-  # Python dependencies declared in pyproject.toml.
-  - package-ecosystem: "pip"
+  # Refresh the complete portable dependency graph, not only manifest bounds.
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      python-lock:
+        patterns: ["*"]
 
   # Action versions used by workflows under .github/workflows/.
   - package-ecosystem: "github-actions"

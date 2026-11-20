@@ -97,6 +97,14 @@ tag expecting the new manual-only publishing behavior.
 
 ## Security and Credentials
 
+Dependency/security changes go through pull requests. `uv sync --locked --all-extras`
+installs the repeatable contributor environment. To propose an update, run
+`uv lock --upgrade`, review the dependency diff, and run the tests and the audits
+in [SECURITY.md](https://github.com/tonyjurg/Perseus-mcp/blob/main/SECURITY.md).
+The published package continues to offer a flexible pip install; a repository
+lockfile is not imposed on PyPI users. CI tests both the lock and the allowed
+dependency range. Release and publishing jobs depend on the full security audit.
+
 Do not commit API keys, local `.env` files, notebook secrets, or private client
 configuration. The `.env.example` file documents expected environment variables
 without storing real credentials.

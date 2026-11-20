@@ -1,5 +1,9 @@
 include LICENSE
 include README.md
 include server.json
+include uv.lock
+include .python-version
+include SECURITY.md
+include scripts/check_fastmcp_advisories.py
 recursive-include docs *
 prune docs/_site
