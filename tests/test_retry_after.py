@@ -99,7 +99,7 @@ def test_http_retry_guidance_reaches_mcp_caller(
                 # Python warnings are not part of the MCP result; assert the
                 # structured guidance that the remote caller actually receives.
                 result = await client.call_tool_mcp(
-                    "get_passage", {"urn": "urn:cts:private"}
+                    "get_passage", {"urn": "urn:cts:private:author.work:1"}
                 )
                 assert result.isError
                 data = json.loads(result.content[0].text)

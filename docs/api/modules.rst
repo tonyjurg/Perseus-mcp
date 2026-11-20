@@ -99,6 +99,13 @@ perseus_mcp.upstream
    :private-members:
    :special-members: __init__
 
+perseus_mcp.validation
+----------------------
+
+.. automodule:: perseus_mcp.validation
+   :members:
+   :private-members:
+
 perseus_mcp.tools
 -----------------
 

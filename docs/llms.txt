@@ -6,6 +6,8 @@ The project is intended for classicists, students, developers, and LLM clients. 
 
 Install with `python -m pip install perseus-mcp`, then launch `perseus-mcp` or `python -m perseus_mcp`. From a repository checkout, use `uv sync --locked` followed by `uv run --locked perseus-mcp` to use the tested dependency versions.
 
+URN inputs must use CTS structure (`urn:cts:namespace:textgroup.work:passage`) and be no longer than 1,024 characters. Author/work/edition references with an empty or omitted passage, passage ranges, and Unicode subreferences are accepted. Search queries and author/title selectors are limited to 2,048 characters; controls and invisible formatting characters are rejected. Raw lengths are checked before normalization and normalized search queries are checked again. Invalid input fails before cache access or network requests. Well-formed URNs are still resolved by upstream services; local syntax validation does not guarantee availability.
+
 ## Documentation
 
 - [Documentation home](https://tonyjurg.github.io/Perseus-mcp/): Project overview, documentation map, quick-start commands, and responsible-disclosure note.

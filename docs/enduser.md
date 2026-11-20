@@ -260,6 +260,33 @@ You can also test the server independently with MCP Inspector:
 npx @modelcontextprotocol/inspector uv run --locked perseus-mcp
 ```
 
+## Accepted references and search text
+
+Use a CTS reference such as `urn:cts:greekLit:tlg0012.tlg001:1.1`, rather
+than a website link. Copy references from the discovery tools when possible.
+
+| Input | Limit |
+| --- | --- |
+| A URN, including `text_urn`, `passage_urn`, `text_group`, and `work` | 1,024 characters |
+| Search text, an author name, or a work title | 2,048 characters |
+
+Author, work, edition, passage, and range references are accepted. Unicode
+subreferences such as `:1.1@Μῆνιν[2]` are supported. A work reference may end
+with a colon or omit it, matching the forms returned by the catalogues.
+Search operators and Greek/Beta Code input keep their existing behavior.
+
+Malformed references and excessive text are rejected on your computer before
+looking in the metadata cache or contacting Perseus/Scaife. If an error reports
+a length limit, shorten the query or split the research into smaller searches.
+Remove spaces, line breaks, URL query strings, and fragments from URNs. Search
+text can contain normal spaces, but control and invisible formatting characters
+are rejected. Limits count the original text before trimming/conversion, and
+the converted search text must also fit.
+
+A correctly formatted reference can still be unavailable upstream. Use
+`get_author_resources`, `get_work_resources`, or `get_valid_references` to
+discover available works and passages.
+
 ## A reliable research workflow
 
 Ask the model to work in four stages:

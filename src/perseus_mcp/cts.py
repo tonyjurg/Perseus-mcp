@@ -14,6 +14,7 @@ from . import _common
 from . import cache as _cache
 from . import http as _http
 from . import upstream as _upstream
+from .validation import validate_urn
 
 __all__ = [
     "CTS_BASE",
@@ -36,9 +37,11 @@ async def _cts_request(
     request: str, urn: str | None = None, **extra_params: Any
 ) -> str:
     """Fetch a CTS operation with optional URN and parameters, validating its envelope."""
+    if urn is None and request != "GetCapabilities":
+        raise ValueError("urn is required for this CTS request")
     params: dict[str, Any] = {"request": request, **extra_params}
-    if urn:
-        params["urn"] = urn
+    if urn is not None:
+        params["urn"] = validate_urn(urn)
     return await _http._get(
         CTS_BASE,
         params=params,
@@ -61,6 +64,7 @@ async def _get_valid_references_cached(
     urn: str, level: int | None = None, refresh: bool = False
 ) -> str:
     """Return validated reference XML for a URN and optional citation level."""
+    validate_urn(urn)
     params: dict[str, Any] = {}
     if level is not None:
         params["level"] = str(level)

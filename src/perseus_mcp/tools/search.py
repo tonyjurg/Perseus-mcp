@@ -10,6 +10,12 @@ from .. import greek as _greek
 from .. import http as _http
 from .. import scaife as _scaife
 from .. import upstream as _upstream
+from ..validation import (
+    validate_optional_urn,
+    validate_selector,
+    validate_text,
+    validate_urn,
+)
 
 __all__ = ["get_passage_highlights", "search_perseus", "search_within_text"]
 
@@ -51,6 +57,12 @@ async def search_perseus(
     )
     normalized_page_num = _common._positive_int(page_num, "page_num")
     normalized_result_format = _common._normalize_search_result_format(result_format)
+    effective_text_group = validate_optional_urn(text_group, "text_group")
+    effective_work = validate_optional_urn(work, "work")
+    if author is not None:
+        validate_text(author, "author", allow_empty=True)
+        if author.strip():
+            validate_selector(author, "author")
 
     authors: list[dict[str, Any]] = []
     resolved_author_text_group: str | None = None
@@ -58,8 +70,6 @@ async def search_perseus(
         authors = await _discovery._resolve_author_entries(author, language)
         resolved_author_text_group = _scaife._single_author_text_group_urn(authors)
 
-    effective_text_group = _common._normalize_space(text_group) or None
-    effective_work = _common._normalize_space(work) or None
     if (
         effective_text_group is None
         and effective_work is None
@@ -115,6 +125,7 @@ async def search_within_text(
     normalized_query = _greek._normalize_query_for_search(
         query, language, query_format, preserve_operators
     )
+    validate_urn(text_urn, "text_urn")
     return await _http._get(
         _scaife.SCAIFE_SEARCH,
         params={
@@ -143,6 +154,7 @@ async def get_passage_highlights(
     normalized_query = _greek._normalize_query_for_search(
         query, language, query_format, preserve_operators
     )
+    validate_urn(passage_urn, "passage_urn")
     return await _http._get(
         _scaife.SCAIFE_SEARCH,
         params={

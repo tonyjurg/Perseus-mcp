@@ -120,6 +120,19 @@ response.
 
 ## URN Discovery
 
+URN arguments must start with `urn:cts:` and include a namespace and textgroup
+or work identifier. They may be at most 1,024 characters long. Passage ranges,
+lettered citations, and Unicode subreferences are supported; catalogue URNs
+with or without a final colon remain accepted. URLs, malformed components,
+whitespace, control characters, and URL fragments/query strings are rejected.
+
+Search queries and author/title selectors may be at most 2,048 characters long
+and cannot contain control or invisible formatting characters. Limits apply
+before trimming or Greek conversion and also to the normalized search query.
+Invalid inputs fail locally before any metadata-cache access or upstream request.
+These checks validate structure; the upstream service still decides whether a
+well-formed reference exists.
+
 Available edition URNs can differ between Perseus CTS and Scaife search results,
 and the live inventory can change. Use `get_author_resources`,
 `get_work_resources`, or `list_text_groups` before constructing
