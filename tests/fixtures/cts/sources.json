@@ -26,17 +26,20 @@
     {
       "operation": "GetLabel",
       "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetLabel&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1",
-      "local_root": "GetLabel"
+      "local_root": "GetLabel",
+      "known_invalid_sha256": "1b7b0035ef11846da6daf8548771e210287270a2222d387a4b97f87aa00e9f34"
     },
     {
       "operation": "GetFirstUrn",
       "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetFirstUrn&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1",
-      "local_root": "GetFirstUrn"
+      "local_root": "GetFirstUrn",
+      "known_invalid_sha256": "1b7b0035ef11846da6daf8548771e210287270a2222d387a4b97f87aa00e9f34"
     },
     {
       "operation": "GetPrevNextUrn",
       "url": "https://www.perseus.tufts.edu/hopper/CTS?request=GetPrevNextUrn&urn=urn%3Acts%3AgreekLit%3Atlg0012.tlg001.perseus-grc1%3A1.2",
-      "local_root": "GetPrevNextUrn"
+      "local_root": "GetPrevNextUrn",
+      "known_invalid_sha256": "1b7b0035ef11846da6daf8548771e210287270a2222d387a4b97f87aa00e9f34"
     }
   ]
 }

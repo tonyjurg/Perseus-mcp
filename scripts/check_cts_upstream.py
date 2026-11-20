@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import hashlib
 import html
 import json
 import os
@@ -35,7 +36,25 @@ async def check_sources(manifest: dict) -> list[dict]:
         try:
             # Use the bounded transport, bypassing metadata caches. A total
             # deadline also bounds endpoints that send a slow trickle of data.
-            body = await asyncio.wait_for(server._get(source["url"]), timeout=60)
+            # Inspect HTML here too: the default plaintext validator rejects it
+            # before we can identify the previously captured broken probe page.
+            # The transport still enforces challenges, HTTP errors and limits.
+            body = await asyncio.wait_for(
+                server._get(source["url"], validator=server.reject_challenge),
+                timeout=60,
+            )
+            if "root" not in source and source.get("known_invalid_sha256"):
+                # Ignore only this reviewed payload on probes without a valid
+                # baseline. New invalid payloads and captured responses fail.
+                digest = hashlib.sha256(
+                    body.replace("\r\n", "\n").strip().encode("utf-8")
+                ).hexdigest()
+                if digest == source["known_invalid_sha256"]:
+                    raise UpstreamFailure(
+                        "KNOWN_UPSTREAM_INVALID_PAYLOAD",
+                        "The upstream probe returned its recorded malformed page; "
+                        "no usable CTS format was observed.",
+                    )
             root = fromstring(body)
             result["observed_root"] = root.tag
             validate_cts(body, source["operation"])

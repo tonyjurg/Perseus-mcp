@@ -16,11 +16,18 @@ URLs in `sources.json` and compares exact expanded XML roots (local name and
 namespace). It also checks the manifest's three additional `probes`: GetLabel,
 GetFirstUrn, and GetPrevNextUrn. Those endpoints have no successful captured
 envelope yet, so the probes require the correct local operation root and report
-the observed namespace without inventing a namespace baseline. Their known
-malformed HTML responses are failures, not accepted baselines.
+the observed namespace without inventing a namespace baseline. Each probe's
+`known_invalid_sha256` identifies the reviewed `navigation-malformed.html`
+response (SHA-256 of UTF-8 text after CRLF-to-LF conversion and stripping outer
+whitespace). That exact page is reported as `KNOWN_UPSTREAM_INVALID_PAYLOAD`
+and is inconclusive, with `ok: false`: it provides no usable CTS envelope.
+It is not accepted as a successful format baseline. Any other invalid payload
+still fails, including a changed error page. Captured successful responses
+never receive this exception. Remove the fingerprint when a probe gains a
+reviewed successful capture.
 
 Each result is marked `ok`, `failed`, or `inconclusive`. Only
-`ROOT_OR_NAMESPACE_CHANGED` and `INVALID_PAYLOAD` produce exit code 1.
+`ROOT_OR_NAMESPACE_CHANGED` and unexpected `INVALID_PAYLOAD` produce exit code 1.
 Challenges, timeouts, HTTP/connection failures, and other upstream errors are
 inconclusive: the report includes their codes, but they alone produce exit code
 0. The overall report and job summary say `INCONCLUSIVE` rather than `OK` when
@@ -35,7 +42,8 @@ Keep this workflow out of branch-protection required checks.
 Run it locally with `python scripts/check_cts_upstream.py`; use `--report PATH`
 to save the JSON report. Each endpoint is fetched once, without metadata caches
 or retries, with a 60-second total deadline and the server's response-size cap.
-No response bodies are saved, and the monitor never updates the baseline.
+No response bodies are saved, and the monitor never updates the baseline or
+known-invalid fingerprints.
 Investigate failed runs and review any new captures before updating fixtures or
 `sources.json`; an outage or challenge must not become the new expected format.
 

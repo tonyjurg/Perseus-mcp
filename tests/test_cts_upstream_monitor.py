@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
 
 from perseus_mcp.upstream import UpstreamFailure
@@ -27,7 +28,7 @@ def mock_sources(monkeypatch, replacement=None, overrides=None):
         bodies[MANIFEST["responses"][0]["url"]] = replacement
     bodies.update(overrides or {})
 
-    async def get(url):
+    async def get(url, **kwargs):
         calls.append(url)
         body = bodies[url]
         if isinstance(body, Exception):
@@ -126,7 +127,7 @@ def test_inconclusive_only_run_exits_zero_and_is_not_reported_as_ok(
 ):
     calls = []
 
-    async def get(url):
+    async def get(url, **kwargs):
         calls.append(url)
         raise error
 
@@ -161,12 +162,88 @@ def test_drift_still_fails_when_another_endpoint_is_inconclusive(monkeypatch, tm
 @pytest.mark.parametrize(
     "source", MANIFEST["probes"], ids=lambda source: source["operation"]
 )
-def test_new_probes_reject_known_malformed_response(monkeypatch, source):
+def test_known_malformed_probe_is_inconclusive(monkeypatch, source):
     malformed = (FIXTURES / "navigation-malformed.html").read_text(encoding="utf-8")
     mock_sources(monkeypatch, overrides={source["url"]: malformed})
     results = asyncio.run(monitor.check_sources(MANIFEST))
     result = next(
         result for result in results if result["operation"] == source["operation"]
     )
+    assert result["ok"] is False
+    assert result["outcome"] == "inconclusive"
+    assert result["error"] == "KNOWN_UPSTREAM_INVALID_PAYLOAD"
+
+
+@pytest.mark.parametrize(
+    "source", MANIFEST["probes"], ids=lambda source: source["operation"]
+)
+@pytest.mark.parametrize(
+    "body", ["<broken>", "<Unexpected/>", "<html>New error</html>"]
+)
+def test_new_probe_payload_failures_still_fail(monkeypatch, source, body):
+    mock_sources(monkeypatch, overrides={source["url"]: body})
+    results = asyncio.run(monitor.check_sources(MANIFEST))
+    result = next(
+        result for result in results if result["operation"] == source["operation"]
+    )
     assert result["outcome"] == "failed"
     assert result["error"] == "INVALID_PAYLOAD"
+
+
+def test_known_probe_page_still_fails_for_a_captured_response(monkeypatch):
+    source = dict(
+        MANIFEST["responses"][0],
+        known_invalid_sha256=MANIFEST["probes"][0]["known_invalid_sha256"],
+    )
+    malformed = (FIXTURES / "navigation-malformed.html").read_text(encoding="utf-8")
+    mock_sources(monkeypatch, malformed)
+    results = asyncio.run(monitor.check_sources({"responses": [source]}))
+    assert results[0]["outcome"] == "failed"
+    assert results[0]["error"] == "INVALID_PAYLOAD"
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_report_for_recorded_run_failures_through_transport(
+    monkeypatch, tmp_path, changed
+):
+    """Replay run 43879235649, including the transport's HTML validation."""
+    calls = []
+
+    def respond(request):
+        calls.append(str(request.url))
+        operation = request.url.params["request"]
+        if operation in {"GetFirstUrn", "GetPrevNextUrn"}:
+            return httpx.Response(429)
+        filename = (
+            "navigation-malformed.html"
+            if operation == "GetLabel"
+            else f"{operation}.xml"
+        )
+        body = (FIXTURES / filename).read_text(encoding="utf-8")
+        if changed and operation == "GetPassage":
+            body = body.replace("http://chs.harvard.edu/xmlns/cts3", "urn:changed")
+        return httpx.Response(200, text=body)
+
+    monkeypatch.setattr(
+        monitor.server,
+        "_HTTP_CLIENT",
+        httpx.AsyncClient(transport=httpx.MockTransport(respond)),
+    )
+
+    async def shared():
+        return monitor.server._HTTP_CLIENT
+
+    monkeypatch.setattr(monitor.server, "_shared_client", shared)
+    report = tmp_path / "report.json"
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(sys, "argv", ["check_cts_upstream.py", "--report", str(report)])
+    with pytest.warns(monitor.server.UpstreamRateLimitWarning, match="HTTP 429"):
+        assert monitor.main() == int(changed)
+    saved = json.loads(report.read_text(encoding="utf-8"))
+    assert calls == [source["url"] for source in SOURCES]
+    assert saved["failed"] == int(changed)
+    assert saved["inconclusive"] == 3
+    assert saved["outcome"] == ("failed" if changed else "inconclusive")
+    assert saved["results"][4]["error"] == "KNOWN_UPSTREAM_INVALID_PAYLOAD"
+    assert saved["outcome"].upper() in summary.read_text(encoding="utf-8")
