@@ -10,6 +10,7 @@ from urllib.parse import quote
 from . import cache as _cache
 from . import http as _http
 from . import upstream as _upstream
+from .validation import validate_urn
 
 __all__ = [
     "SCAIFE_LIBRARY",
@@ -120,16 +121,19 @@ def _quote_urn_path_segment(urn: str) -> str:
 
 def _scaife_library_url(urn: str) -> str:
     """Build the JSON metadata URL for a safely encoded CTS URN."""
+    validate_urn(urn)
     return f"{SCAIFE_LIBRARY.rstrip('/')}/{_quote_urn_path_segment(urn)}/json/"
 
 
 def _scaife_passage_json_url(urn: str) -> str:
     """Build the passage JSON URL for a safely encoded CTS URN."""
+    validate_urn(urn)
     return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{_quote_urn_path_segment(urn)}/json/"
 
 
 def _scaife_passage_text_url(urn: str) -> str:
     """Build the passage plaintext URL for a safely encoded CTS URN."""
+    validate_urn(urn)
     return f"{SCAIFE_LIBRARY.rstrip('/')}/passage/{_quote_urn_path_segment(urn)}/text/"
 
 

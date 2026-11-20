@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from .. import _app, _common
+from .. import _app
 from .. import cts as _cts
 from .. import discovery as _discovery
+from ..validation import validate_selector, validate_text
 
 __all__ = [
     "find_author_names",
@@ -28,6 +29,8 @@ async def list_text_groups(
     titles. `limit` must be between 1 and 500. Use `offset` with `has_more`
     to page through matching textgroups.
     """
+    if query is not None:
+        validate_text(query, allow_empty=True)
     capabilities_xml = await _cts._get_capabilities_cached()
     return _discovery._list_text_groups_from_capabilities(
         capabilities_xml, language, query, limit, offset
@@ -43,6 +46,7 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
     - author: "tlg0012"
     - author: "urn:cts:greekLit:tlg0012"
     """
+    validate_selector(author, "author")
     capabilities_xml = await _cts._get_capabilities_cached()
     return _discovery._author_resources_from_capabilities(
         capabilities_xml, author, language
@@ -67,8 +71,7 @@ async def find_author_names(
     - query: "Hom"
     - query: "Plut"
     """
-    if not _common._normalize_space(query):
-        raise ValueError("query must not be empty")
+    validate_text(query)
     authors = await _discovery._resolve_author_entries(query, language, names_only=True)
     return _discovery._author_name_matches_response(
         authors, query, language, limit, offset
@@ -86,6 +89,7 @@ async def get_work_resources(urn_or_title: str, language: str | None = None) -> 
     - urn_or_title: "urn:cts:greekLit:tlg0012.tlg001"
     - urn_or_title: "Iliad"
     """
+    validate_selector(urn_or_title, "urn_or_title")
     capabilities_xml = await _cts._get_capabilities_cached()
     return _discovery._work_resources_from_capabilities(
         capabilities_xml, urn_or_title, language

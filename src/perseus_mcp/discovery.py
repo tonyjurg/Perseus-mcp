@@ -14,6 +14,7 @@ from defusedxml.ElementTree import fromstring as _safe_xml_fromstring
 from . import _common
 from . import cts as _cts
 from . import scaife as _scaife
+from .validation import validate_selector, validate_text
 
 __all__ = [
     "_author_name_matches_response",
@@ -308,6 +309,10 @@ async def _resolve_author_entries(
     names_only: bool = False,
 ) -> list[dict[str, Any]]:
     """Fetch both catalogues concurrently and merge matches; allow one source to fail."""
+    if names_only:
+        validate_text(author, "author")
+    else:
+        validate_selector(author, "author")
 
     async def from_cts() -> list[dict[str, Any]]:
         """Load CTS inventory and extract matching authors."""

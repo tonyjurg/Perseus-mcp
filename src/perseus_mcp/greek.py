@@ -6,6 +6,7 @@ import re
 import unicodedata
 
 from . import _common
+from .validation import validate_text
 
 __all__ = [
     "_BETACODE_COMBINING_MARKS",
@@ -140,11 +141,12 @@ def _normalize_query_for_search(
     preserve_operators: bool = False,
 ) -> str:
     """Validate a nonempty query and normalize Greek unless operators must be preserved."""
-    if not _common._normalize_space(query):
-        raise ValueError("query must not be empty")
+    validate_text(query)
     lang_code = _common._normalize_search_language(language)
     if preserve_operators:
-        return unicodedata.normalize("NFC", query)
-    if lang_code == "gr":
-        return _normalize_greek_query(query, query_format)
-    return query
+        normalized_query = unicodedata.normalize("NFC", query)
+    elif lang_code == "gr":
+        normalized_query = _normalize_greek_query(query, query_format)
+    else:
+        normalized_query = query
+    return validate_text(normalized_query)

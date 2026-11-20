@@ -26,6 +26,7 @@ Responsibilities
 * ``discovery`` parses and merges author/work inventories.
 * ``_common`` normalizes XML text, languages, and pagination arguments.
 * ``upstream`` validates payloads and defines safe errors and retry hints.
+* ``validation`` bounds input strings and checks CTS syntax before cache/network use.
 * ``tools`` contains the async MCP entry points grouped by responsibility.
 
 Implementation modules import their dependencies directly; none imports

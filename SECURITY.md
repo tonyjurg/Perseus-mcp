@@ -58,6 +58,24 @@ necessary for API rate limits; CI supplies its read-only job token. No findings
 are ignored on the basis that a feature is unused. Empty/unavailable feeds fail
 instead of producing a successful result.
 
+## Caller input
+
+URNs are limited to 1,024 Unicode characters; queries and author/title selectors
+to 2,048. Raw lengths are checked before normalization, and normalized search
+queries are checked again. CTS request/cache helpers and Scaife URL builders
+validate URN structure before use; search/discovery tools check all supplied
+selectors before loading inventories or making requests. Controls, invisible
+formatting characters, and malformed CTS structure fail locally without
+including the submitted value in validation messages. URL path encoding remains
+an additional defense.
+
+Validation preserves catalogue URNs with or without a trailing colon, citation
+ranges, lettered labels, and Unicode substring references. It does not look up
+existence or impose an allowlist of namespaces/works. It prevents malformed or
+oversized URNs from creating cache keys, but is not a disk quota or a rate limit
+for syntactically valid requests. Existing metadata can be removed with
+`clear_metadata_cache`.
+
 ## Application scope and model providers
 
 The shipped Perseus MCP server fetches scholarly data from Perseus CTS and

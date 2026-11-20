@@ -81,7 +81,7 @@ def test_transport_errors_are_safe_mcp_errors(
             monkeypatch.setattr(server, "_shared_client", shared)
             async with Client(server.mcp) as client:
                 result = await client.call_tool_mcp(
-                    "get_passage", {"urn": "urn:cts:private"}
+                    "get_passage", {"urn": "urn:cts:private:author.work:1"}
                 )
                 assert result.isError
                 data = json.loads(result.content[0].text)
