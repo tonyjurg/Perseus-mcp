@@ -13,6 +13,8 @@ jobs:
     name: Build and publish
     runs-on: ubuntu-latest
     environment: pypi
+    env:
+      UV_PYTHON: "3.12.16"
 
     permissions:
       contents: read

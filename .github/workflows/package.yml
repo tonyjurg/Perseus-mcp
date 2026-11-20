@@ -30,6 +30,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.12.16"
 
     steps:
       - uses: actions/checkout@v7
