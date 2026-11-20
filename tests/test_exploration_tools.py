@@ -383,7 +383,9 @@ def test_clear_cache_removes_readonly_directories(
     cache_dir = tmp_path / "perseus-mcp"
     protected_dir = cache_dir / "capabilities"
     protected_dir.mkdir(parents=True)
-    (protected_dir / "metadata.xml").write_text("<xml/>", encoding="utf-8")
+    (protected_dir / f"{server._cache_key({'request': 'test'})}.xml").write_text(
+        "<xml/>", encoding="utf-8"
+    )
     protected_dir.chmod(stat.S_IREAD)
     monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(cache_dir))
 

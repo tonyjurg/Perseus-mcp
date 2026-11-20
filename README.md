@@ -93,21 +93,25 @@ that read it should use `total_count` instead.
 
 Discovery and navigation tools cache stable CTS metadata locally to avoid
 repeated multi-megabyte `GetCapabilities` and `GetValidReff` requests. The
-default disk cache lives in `.cache/perseus-mcp` under the current working
-directory and also uses an in-memory cache for the running server process.
+default disk cache uses the operating system's per-user cache directory, shared
+by notebooks and MCP servers running as the same user. Each process also has
+its own in-memory cache. Passage bodies and search results are not cached.
 Configure it with:
 
 - `PERSEUS_MCP_CACHE_DIR` — override the disk cache directory.
 - `PERSEUS_MCP_CACHE_TTL_SECONDS` — set cache TTL; default is 86400 seconds.
 - `PERSEUS_MCP_DISABLE_CACHE=1` — disable both memory and disk cache reads/writes.
 
-The current working directory is the directory from which the Python process is
-started. Running the MCP server from the repository root uses
-`.cache/perseus-mcp`; running a notebook from `examples/` would otherwise use
-`examples/.cache/perseus-mcp`. That is not a second server instance, only a
-second cache location for a separate Python process. To keep one cache location
-across notebooks and MCP clients, set `PERSEUS_MCP_CACHE_DIR` to an absolute
-path such as `/path/to/Perseus-mcp/.cache/perseus-mcp`.
+Default locations are `%LOCALAPPDATA%\perseus-mcp\Cache` on Windows,
+`~/Library/Caches/perseus-mcp` on macOS, and `$XDG_CACHE_HOME/perseus-mcp`
+(normally `~/.cache/perseus-mcp`) on Linux. `get_cache_status()` reports the
+resolved path. An absolute `PERSEUS_MCP_CACHE_DIR` overrides the default;
+explicit relative overrides still resolve against the process working directory.
+Existing project-local `.cache/perseus-mcp` directories are left untouched.
+To reuse one, set the override to its absolute path.
+
+Cache clearing removes generated metadata files in the three known namespaces,
+leaves unrelated files in place, and skips symlinks and Windows reparse points.
 Disk entries are written to unique sibling temporary files and atomically
 replaced, so multiple local processes can safely share that directory without
 exposing partially written cache files. Disk-cache write failures emit a
@@ -131,6 +135,24 @@ Perseus may also return `429 Too Many Requests` when a workflow sends many CTS
 requests in a short period. Pause before retrying, reduce concurrency, and add
 delays to passage-processing loops. The server currently exposes the upstream
 HTTP error instead of retrying automatically.
+When a 429 or 503 supplies a positive `Retry-After`, subsequent requests to that
+origin fail locally with the remaining delay until its cooldown expires. This
+state is shared within one Python process; separate processes still need client
+pacing and concurrency limits.
+
+## MCP Capabilities and Trust
+
+The client controls which tools an LLM may invoke. Research tools retrieve
+public scholarly text and may update the metadata cache; the cache tools inspect,
+refresh, or delete generated local metadata. The tools expose no arbitrary file
+path, shell execution, or credential-reading capability. The Python process
+still runs with the launching user's permissions; tool annotations are advisory
+hints for clients, not a sandbox or approval mechanism.
+
+Treat retrieved text as untrusted source material, including any instructions
+embedded in it. Queries and URNs are sent to the public upstream services.
+Redirects are limited to the original HTTPS scheme, host, and port, without
+embedded credentials; blocked targets return `UPSTREAM_REDIRECT_BLOCKED`.
 
 ## Setup
 

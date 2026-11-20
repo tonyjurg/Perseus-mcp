@@ -414,12 +414,47 @@ metadata to reduce repeat requests.
 | `PERSEUS_MCP_CACHE_DIR` | Choose an absolute disk-cache directory |
 | `PERSEUS_MCP_CACHE_TTL_SECONDS` | Change the expiry time |
 
-By default, the cache is stored at `.cache/perseus-mcp` relative to the
-process's working directory. Use one absolute `PERSEUS_MCP_CACHE_DIR` if an MCP
-client and notebook should share the same disk cache.
+The default cache is shared across working directories for the same OS user:
+
+| Platform | Default directory |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\perseus-mcp\Cache` |
+| macOS | `~/Library/Caches/perseus-mcp` |
+| Linux | `$XDG_CACHE_HOME/perseus-mcp`, normally `~/.cache/perseus-mcp` |
+
+Use `get_cache_status` to see the resolved path. Explicit absolute overrides
+choose another shared directory; explicit relative overrides resolve against
+the working directory. Earlier project-local `.cache/perseus-mcp` directories
+are not migrated or deleted. Set an absolute override to reuse an old cache.
+Only metadata is cached, never passage bodies or search results.
+
+`clear_metadata_cache` deletes generated hash-named XML/JSON entries and their
+temporary files in `capabilities`, `valid_reff`, and `scaife_library`. It skips
+symlinks and Windows reparse points, preserves unrelated files and nested
+directories, and removes directories only when empty. Its JSON summary includes
+`disk_files_removed`; `disk_cache_removed` indicates whether the root directory
+was removed. Status counts only these managed files.
 
 On Windows, OneDrive can temporarily lock or mark cache directories read-only.
 Close the process holding the directory and retry `clear_metadata_cache()`.
+
+## MCP permissions and source trust
+
+Research tools read public scholarly sources and can populate the local metadata
+cache. `refresh_metadata_cache` writes that cache and `clear_metadata_cache`
+removes its generated entries. Their MCP annotations advertise these side
+effects: cache-producing research tools and refresh are non-destructive writes,
+clear is destructive, and cache inspection
+and clearing have no external-service access. Annotations are advisory; use
+your client's permissions to decide which calls require approval.
+
+No tool accepts an arbitrary filesystem path, executes shell commands, or reads
+credentials. The server process nevertheless inherits the user's OS permissions;
+it is not an operating-system sandbox. Cache paths and runtime configuration
+come from the launching environment, not tool arguments.
+
+Treat returned text as untrusted research data, not instructions for the LLM.
+Queries and URNs are transmitted to the public Perseus/Scaife services.
 
 ## Troubleshooting
 
@@ -434,6 +469,12 @@ failures (including redirect loops) use `UPSTREAM_TRANSPORT_ERROR`. Error JSON
 includes `upstream_http_status` when response headers were received, or `null`
 when no response status is available. Response bodies and raw transport details
 are not included in these messages.
+
+Redirects may stay within the original HTTPS origin (same scheme, hostname,
+and port) only. Cross-host, HTTP downgrade, port-changing, and credential-bearing
+redirects are closed unread and rejected before contacting the target, using
+`UPSTREAM_REDIRECT_BLOCKED` with no automatic retry permission. If a service
+moves to a different host, its configured base URL needs a reviewed update.
 
 Responses are streamed with a default 16 MiB limit (16,777,216 bytes). Set
 `PERSEUS_MCP_MAX_RESPONSE_BYTES` to a positive integer to change it. A declared
@@ -470,6 +511,15 @@ large upstream values cannot request an unbounded wait. Callers should use this
 bounded delay when retrying. A `null` value supplies no delay advice;
 it does not mean retry immediately. For example, a 429 with `Retry-After: 30`
 returns `automatic_retry_allowed: true` and `retry_after_seconds: 30` by default.
+
+After an actual 429 or 503 with a positive valid `Retry-After`, the server records
+a per-origin cooldown using a monotonic clock. Further requests to that origin
+fail immediately without network traffic, preserving the earlier status and
+reporting the remaining rounded-up delay. Other origins remain available;
+requests resume normally after expiry. This never schedules a retry or waits
+inside a tool call. Missing, invalid, or zero delays do not start a cooldown.
+Cooldowns are process-local and do not coordinate independent notebook kernels
+or clients. Continue to limit concurrency and pace high-volume workflows.
 
 Override individual defaults with the `PERSEUS_MCP_RETRY_POLICY` environment
 variable, containing a JSON object. For example, in an MCP configuration's

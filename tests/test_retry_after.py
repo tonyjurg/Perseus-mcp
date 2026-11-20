@@ -7,7 +7,7 @@ import httpx
 import pytest
 from fastmcp import Client
 
-from perseus_mcp import server
+from perseus_mcp import http, server
 from perseus_mcp.upstream import UpstreamFailure, parse_retry_after
 
 NOW = datetime(2026, 11, 9, 14, 0, 0, 500000, tzinfo=UTC)
@@ -143,3 +143,85 @@ def test_challenges_do_not_inherit_http_retry_permission(monkeypatch, status):
     data = json.loads(UpstreamFailure("UPSTREAM_CHALLENGE", "safe", status).as_json())
     assert data["automatic_retry_allowed"] is False
     assert data["retry_after_seconds"] is None
+
+
+@pytest.mark.parametrize("status", [429, 503])
+def test_retry_after_cooldown_blocks_further_requests_until_expiry(monkeypatch, status):
+    now = [100.0]
+    monkeypatch.setattr(http, "monotonic", lambda: now[0])
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(status, headers={"Retry-After": "30"})
+        return httpx.Response(200, text="ok")
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+
+            async def shared():
+                return client
+
+            monkeypatch.setattr(server, "_shared_client", shared)
+            with pytest.raises(UpstreamFailure):
+                await server._get("https://example.invalid/first")
+            now[0] += 0.25
+            with pytest.raises(UpstreamFailure) as caught:
+                await server._get("https://example.invalid/second")
+            assert caught.value.status == status
+            assert caught.value.retry_after_seconds == 30
+            assert len(calls) == 1
+            assert await server._get("https://other.example/path") == "ok"
+            now[0] = 130.0
+            assert await server._get("https://example.invalid/third") == "ok"
+
+    if status == 429:
+        with pytest.warns(server.UpstreamRateLimitWarning):
+            asyncio.run(run())
+    else:
+        asyncio.run(run())
+    assert len(calls) == 3
+
+
+@pytest.mark.parametrize(
+    "header,body,code",
+    [
+        (None, "unavailable", "UPSTREAM_HTTP_ERROR"),
+        ("0", "unavailable", "UPSTREAM_HTTP_ERROR"),
+        ("invalid", "unavailable", "UPSTREAM_HTTP_ERROR"),
+        (
+            "30",
+            '<html><script id="anubis_challenge"></script></html>',
+            "UPSTREAM_CHALLENGE",
+        ),
+    ],
+)
+def test_absent_or_unusable_retry_guidance_does_not_start_cooldown(
+    monkeypatch, header, body, code
+):
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(
+                503,
+                headers={} if header is None else {"Retry-After": header},
+                text=body,
+            )
+        return httpx.Response(200, text="ok")
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+
+            async def shared():
+                return client
+
+            monkeypatch.setattr(server, "_shared_client", shared)
+            with pytest.raises(UpstreamFailure, match=code):
+                await server._get("https://example.invalid/first")
+            assert await server._get("https://example.invalid/second") == "ok"
+
+    asyncio.run(run())
+    assert len(calls) == 2

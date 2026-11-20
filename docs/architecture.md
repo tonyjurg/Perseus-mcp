@@ -185,26 +185,26 @@ reserved characters cannot become fragments, query strings, or extra paths.
 
 CTS `GetCapabilities` and `GetValidReff` responses are stable enough to cache
 for local development and are large enough that repeated live requests make the
-tools feel slow. The server caches those responses in memory and on disk under
-`.cache/perseus-mcp` by default. Cache keys include the request type, CTS base
+tools feel slow. The server caches those responses in memory and in the OS
+per-user cache directory, selected with `platformdirs`. Cache keys include the request type, CTS base
 URL, URN, and level. Environment variables control the behavior:
 
 - `PERSEUS_MCP_CACHE_DIR`
 - `PERSEUS_MCP_CACHE_TTL_SECONDS`
 - `PERSEUS_MCP_DISABLE_CACHE`
 
-Cache clearing uses a `shutil.rmtree` permission handler that makes protected
-entries writable and retries removal. This handles the common Windows/OneDrive
-case where synchronized cache directories are read-only reparse points.
+The default is independent of `Path.cwd()`: `%LOCALAPPDATA%\perseus-mcp\Cache`
+on Windows, `~/Library/Caches/perseus-mcp` on macOS, and the XDG cache directory
+on Linux. Processes under the same user share disk metadata, while their memory
+caches remain independent. Explicit relative overrides retain CWD-based behavior.
+Previous project-local caches are not migrated; an absolute override can reuse one.
 
-The default disk cache path is relative to `Path.cwd()` for the running Python
-process. A notebook kernel launched from `examples/` and an MCP server launched
-from the repository root are separate Python processes, so each has its own
-in-memory cache and, unless `PERSEUS_MCP_CACHE_DIR` is set, a different disk
-cache root. This does not create duplicate MCP server instances by itself; it
-only affects where cache files are read and written. Use an absolute
-`PERSEUS_MCP_CACHE_DIR` when multiple local entry points should share one disk
-cache.
+Cache inspection and clearing enumerate only generated hash-named files in
+`capabilities`, `valid_reff`, and `scaife_library`. Clearing does not call recursive
+tree removal. It skips symlinks and Windows reparse points, restores read-only
+permissions only on verified metadata namespaces/entries, and preserves unrelated
+files and nested directories. Empty directories can be removed. Legacy private
+`_rmtree` compatibility helpers remain available but are not used by the tool.
 
 Disk cache updates use a process-qualified temporary sibling followed by
 `os.replace(...)`. Keeping the temporary file on the same volume makes the
@@ -289,21 +289,28 @@ PY
 
 Errors are not swallowed:
 
-- HTTP errors from upstream propagate as exceptions.
+- Expected upstream errors become safe `UpstreamFailure` values internally and
+  JSON-bearing MCP `ToolError` results at tool boundaries.
 - Unsafe DTD or entity declarations in upstream XML are rejected rather than
   expanded.
-- A Perseus `429 Too Many Requests` response therefore reaches the client as an
-  `httpx.HTTPStatusError`. The current HTTP helper does not implement automatic
-  retry, exponential backoff, or `Retry-After` handling. Callers running passage
-  loops should limit concurrency, add pacing, and retry later rather than
-  immediately repeating the failed request.
+- HTTP 429/503 errors preserve bounded `Retry-After` guidance. A positive delay
+  records an origin-specific monotonic cooldown; subsequent calls fail locally
+  with the remaining delay. There are no server-side retries or blocking waits.
+  Cooldowns do not coordinate separate processes or cancel requests already in
+  flight, so clients must still limit concurrency and pace requests.
+- Redirects are streamed explicitly and restricted to the initial HTTPS origin
+  without embedded credentials. Blocked redirects use `UPSTREAM_REDIRECT_BLOCKED`;
+  redirect loops remain bounded by the HTTP client's redirect limit.
 - Some HTTP 200 responses can still contain invalid or unexpected content; the
   first/previous/next navigation tools detect the known malformed-HTML case.
 - This is useful during research/dev because failures are explicit.
 
-Potential future enhancement:
-
-- Add user-friendly error wrapping with structured tool error messages.
+Tool annotations distinguish research reads, cache inspection, cache refresh,
+and destructive cache clearing. These are client-facing hints, not enforcement.
+Research reads may populate the optional metadata cache. Clients must treat
+external text as source data, and control which tools the LLM may invoke. The
+server exposes no arbitrary file-reading or shell-execution tools; its Python
+process still inherits normal OS permissions.
 
 ## Data Contract
 

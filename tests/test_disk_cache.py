@@ -1,10 +1,13 @@
 import asyncio
+import json
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
 
-from perseus_mcp import server
+from perseus_mcp import cache, server
+from platformdirs import user_cache_path
 from perseus_mcp.server import (
     MetadataCacheWarning,
     _cached_text,
@@ -153,3 +156,112 @@ def test_disk_cache_get_treats_invalid_text_as_cache_miss(
     path.write_bytes(b"\xff")
 
     assert _disk_cache_get(path) is None
+
+
+def test_default_cache_is_shared_across_working_directories(monkeypatch, tmp_path):
+    monkeypatch.delenv("PERSEUS_MCP_CACHE_DIR")
+    expected = user_cache_path("perseus-mcp", appauthor=False).absolute()
+    monkeypatch.chdir(tmp_path)
+    first = server._cache_dir()
+    notebook_dir = tmp_path / "notebooks"
+    notebook_dir.mkdir()
+    monkeypatch.chdir(notebook_dir)
+    assert first == server._cache_dir() == expected
+    assert first.is_absolute()
+
+
+def test_cache_override_preserves_spaces_and_resolves_relative_paths(
+    monkeypatch, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", " shared  cache ")
+    assert server._cache_dir() == tmp_path / "shared  cache"
+
+
+def test_relative_platform_cache_root_does_not_restore_cwd_dependence(monkeypatch):
+    monkeypatch.delenv("PERSEUS_MCP_CACHE_DIR")
+    monkeypatch.setattr(
+        cache, "user_cache_path", lambda *args, **kwargs: Path("relative")
+    )
+    assert server._cache_dir() == Path.home() / ".cache" / "perseus-mcp"
+
+
+def test_clear_cache_preserves_unrelated_files_and_counts_only_metadata(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(tmp_path))
+    key = server._cache_key({"request": "test"})
+    metadata = tmp_path / "capabilities" / f"{key}.xml"
+    _disk_cache_set(metadata, "<TextInventory/>")
+    unrelated = [tmp_path / "notes.txt", metadata.parent / "metadata.xml"]
+    nested = metadata.parent / "keep" / f"{key}.xml"
+    nested.parent.mkdir()
+    unrelated.append(nested)
+    for path in unrelated:
+        path.write_text("keep me", encoding="utf-8")
+    temporary = metadata.with_name(f"{metadata.name}.tmp-123-456")
+    temporary.write_text("partial", encoding="utf-8")
+    before = json.loads(server._cache_status())
+    assert before["disk_files"] == 2
+    result = json.loads(server._clear_cache())
+    assert result["disk_files_removed"] == 2
+    assert result["disk_cache_removed"] is False
+    assert not metadata.exists() and not temporary.exists()
+    assert all(path.read_text(encoding="utf-8") == "keep me" for path in unrelated)
+
+
+@pytest.mark.parametrize("linked", ["root", "namespace", "entry"])
+def test_cache_clear_does_not_follow_links(monkeypatch, tmp_path, linked):
+    root = tmp_path / "cache"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    key = server._cache_key({"request": "test"})
+    if linked == "root":
+        (outside / "capabilities").mkdir()
+    target = (outside / "capabilities" if linked == "root" else outside) / f"{key}.xml"
+    target.write_text("private", encoding="utf-8")
+    try:
+        if linked == "root":
+            root.symlink_to(outside, target_is_directory=True)
+        elif linked == "namespace":
+            root.mkdir()
+            (root / "capabilities").symlink_to(outside, target_is_directory=True)
+        else:
+            namespace = root / "capabilities"
+            namespace.mkdir(parents=True)
+            (namespace / f"{key}.xml").symlink_to(target)
+    except OSError as exc:
+        pytest.skip(f"Creating symlinks is unavailable: {exc}")
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(root))
+    assert json.loads(server._cache_status())["disk_files"] == 0
+    assert json.loads(server._clear_cache())["disk_files_removed"] == 0
+    assert target.read_text(encoding="utf-8") == "private"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows junction regression")
+@pytest.mark.parametrize("linked", ["root", "namespace"])
+def test_cache_clear_skips_windows_junctions(monkeypatch, tmp_path, linked):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    root = tmp_path / "cache"
+    if linked == "root":
+        directory = outside / "capabilities"
+        directory.mkdir()
+        link = root
+    else:
+        directory = outside
+        root.mkdir()
+        link = root / "capabilities"
+    target = directory / f"{server._cache_key({'request': 'test'})}.xml"
+    target.write_text("keep me", encoding="utf-8")
+    result = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(root))
+    assert json.loads(server._cache_status())["disk_files"] == 0
+    assert json.loads(server._clear_cache())["disk_files_removed"] == 0
+    assert target.read_text(encoding="utf-8") == "keep me"

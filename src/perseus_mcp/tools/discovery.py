@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def list_text_groups(
     language: str | None = None,
     query: str | None = None,
@@ -34,7 +34,7 @@ async def list_text_groups(
     )
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_author_resources(author: str, language: str | None = None) -> str:
     """List CTS works/editions/translations for an author name or textgroup URN.
 
@@ -49,7 +49,7 @@ async def get_author_resources(author: str, language: str | None = None) -> str:
     )
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def find_author_names(
     query: str,
     language: str | None = None,
@@ -75,7 +75,7 @@ async def find_author_names(
     )
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_work_resources(urn_or_title: str, language: str | None = None) -> str:
     """List editions/translations/resources for a matching work URN or title.
 

@@ -49,7 +49,7 @@ async def get_passage_plaintext(urn: str) -> str:
     return _cts._passage_plaintext_from_xml(passage_xml)
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_valid_references(urn: str, level: int | None = None) -> str:
     """Get valid citations/references for a work, useful for navigation.
 
@@ -58,7 +58,7 @@ async def get_valid_references(urn: str, level: int | None = None) -> str:
     return await _cts._get_valid_references_cached(urn, level)
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_valid_references_json(
     urn: str, level: int | None = None, limit: int = 100, offset: int = 0
 ) -> str:
@@ -70,7 +70,7 @@ async def get_valid_references_json(
     return _cts._valid_references_json(references_xml, urn, level, limit, offset)
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def count_valid_references(urn: str, level: int | None = None) -> str:
     """Count valid citation references without returning the full reference list."""
     references_xml = await _cts._get_valid_references_cached(urn, level)
@@ -82,13 +82,13 @@ async def count_valid_references(urn: str, level: int | None = None) -> str:
     )
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_capabilities() -> str:
     """Get the list of available texts and editions from Perseus CTS."""
     return await _cts._get_capabilities_cached()
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_label(urn: str) -> str:
     """Get label XML, falling back to GetPassage request metadata when needed."""
     try:
@@ -137,7 +137,7 @@ async def get_label(urn: str) -> str:
     return ET.tostring(root, encoding="unicode")
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_first_urn(urn: str) -> str:
     """Get the first available reference URN for a work/edition URN."""
     try:
@@ -153,7 +153,7 @@ async def get_first_urn(urn: str) -> str:
     return _cts._first_urn_xml(urn, _cts._reference_urns_from_xml(references_xml))
 
 
-@_app._upstream_tool
+@_app._upstream_tool(read_only=False)
 async def get_prev_next_urn(urn: str) -> str:
     """Get previous and next URNs for a passage URN."""
     try:

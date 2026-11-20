@@ -2,7 +2,14 @@ import asyncio
 
 import pytest
 
-from perseus_mcp import server
+from perseus_mcp import http, server
+
+
+@pytest.fixture(autouse=True)
+def _isolate_optional_cache_and_cooldowns(monkeypatch, tmp_path):
+    """Keep tests out of the user's shared cache and isolate rate-limit state."""
+    monkeypatch.setenv("PERSEUS_MCP_CACHE_DIR", str(tmp_path / "perseus-mcp"))
+    monkeypatch.setattr(http, "_UPSTREAM_COOLDOWNS", {})
 
 
 @pytest.fixture(autouse=True)

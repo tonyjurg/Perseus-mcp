@@ -8,6 +8,7 @@ import os
 import warnings
 from collections.abc import Callable
 from contextlib import asynccontextmanager
+from time import monotonic
 from typing import Any
 
 import httpx
@@ -32,6 +33,7 @@ _HTTP_CLIENT: httpx.AsyncClient | None = None
 
 
 _HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
+_UPSTREAM_COOLDOWNS: dict[tuple, tuple[int, float]] = {}
 
 
 class UpstreamRateLimitWarning(UserWarning):
@@ -139,16 +141,50 @@ async def _stream_upstream(client, url, params, timeout):
     # generated next_request explicitly so those bodies are closed unread too.
     """Yield the final streaming response and close all bodies, including unread redirects."""
     request = client.build_request("GET", url, params=params, timeout=timeout)
+    origin = (request.url.scheme, request.url.host, request.url.port)
     for _ in range(client.max_redirects + 1):
+        _check_upstream_cooldown(request.url)
         response = await client.send(request, stream=True, follow_redirects=False)
         try:
             if response.next_request is None:
                 yield response
                 return
+            target = response.next_request.url
+            if (
+                target.scheme != "https"
+                or (target.scheme, target.host, target.port) != origin
+                or target.username
+                or target.password
+            ):
+                raise _upstream.UpstreamFailure(
+                    "UPSTREAM_REDIRECT_BLOCKED",
+                    "The upstream service redirected outside its HTTPS origin; "
+                    "the redirect was not followed.",
+                    response.status_code,
+                )
             request = response.next_request
         finally:
             await response.aclose()
     raise httpx.TooManyRedirects("Upstream redirect limit exceeded", request=request)
+
+
+def _check_upstream_cooldown(url: httpx.URL) -> None:
+    """Reject requests locally while a prior 429/503 Retry-After remains in effect."""
+    origin = (url.scheme, url.host, url.port)
+    cooldown = _UPSTREAM_COOLDOWNS.get(origin)
+    if cooldown is None:
+        return
+    status, deadline = cooldown
+    remaining = math.ceil(deadline - monotonic())
+    if remaining <= 0:
+        _UPSTREAM_COOLDOWNS.pop(origin, None)
+        return
+    raise _upstream.UpstreamFailure(
+        "UPSTREAM_HTTP_ERROR",
+        "The upstream service requested a cooldown; no new request was sent.",
+        status,
+        retry_after_seconds=remaining,
+    )
 
 
 async def _get(
@@ -212,6 +248,11 @@ async def _get(
                     body.extend(chunk)
             text = body.decode(response.encoding or "utf-8", errors="replace")
             _upstream.reject_challenge(text, status)
+            if status in {429, 503} and retry_after_seconds:
+                origin = (response.url.scheme, response.url.host, response.url.port)
+                deadline = monotonic() + retry_after_seconds
+                if deadline > _UPSTREAM_COOLDOWNS.get(origin, (0, 0))[1]:
+                    _UPSTREAM_COOLDOWNS[origin] = status, deadline
             if status == 429:
                 retry_guidance = (
                     f" Retry after {retry_after_seconds} seconds."
