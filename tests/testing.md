@@ -164,7 +164,7 @@ python -m pytest -ra --durations=10 -l
 With `uv`:
 
 ```bash
-uv run --extra dev pytest
+uv run --locked --extra dev pytest
 ```
 
 Run without metadata-cache reads and writes:

@@ -159,7 +159,7 @@ Use these values when a client asks for separate fields:
 | --- | --- |
 | Server name | `perseus` |
 | Command | `uv` |
-| Arguments | `--directory`, absolute project path, `run`, `perseus-mcp` |
+| Arguments | `--directory`, absolute project path, `run`, `--locked`, `perseus-mcp` |
 | Transport | Local process / stdio |
 | Environment | Usually empty |
 
@@ -257,7 +257,7 @@ You should see calls to tools such as `find_author_names`,
 You can also test the server independently with MCP Inspector:
 
 ```bash
-npx @modelcontextprotocol/inspector uv run perseus-mcp
+npx @modelcontextprotocol/inspector uv run --locked perseus-mcp
 ```
 
 ## A reliable research workflow

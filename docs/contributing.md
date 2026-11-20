@@ -61,8 +61,8 @@ ruff check src tests
 With `uv`:
 
 ```bash
-uv run --extra dev pytest
-uv run --extra dev ruff check src tests
+uv run --locked --extra dev pytest
+uv run --locked --extra dev ruff check src tests scripts
 ```
 
 Keep pull requests narrowly scoped. A good pull request usually contains:

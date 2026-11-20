@@ -4,7 +4,7 @@
 
 The project is intended for classicists, students, developers, and LLM clients. The server runs locally over stdio, requires Python 3.11 or newer, and exposes 23 text-returning MCP tools. Perseus and Scaife operations require no API key; the optional OpenRouter notebooks require their own OpenRouter credentials.
 
-Install with `python -m pip install perseus-mcp`, then launch `perseus-mcp` or `python -m perseus_mcp`. From a repository checkout, use `uv sync` followed by `uv run perseus-mcp`.
+Install with `python -m pip install perseus-mcp`, then launch `perseus-mcp` or `python -m perseus_mcp`. From a repository checkout, use `uv sync --locked` followed by `uv run --locked perseus-mcp` to use the tested dependency versions.
 
 ## Documentation
 
@@ -74,6 +74,6 @@ MCP tool annotations describe external access and cache side effects. Cache-prod
 
 The server does not call OpenAI, Anthropic, OpenRouter, or another LLM provider and does not enable FastMCP's OpenAI extras, OpenAPI providers, OAuth proxies/providers, authorization transforms, or SSE serving. Its stdio tools fetch Perseus/Scaife data. External MCP clients choose their own models. Optional notebooks 06 and 09 explicitly call OpenRouter and transmit selected context to it; this distinction matters when describing provider usage.
 
-The security baseline is FastMCP >=4.2.3,<5, with additional transitive security floors. uv.lock records exact cross-platform dependencies and hashes. Use uv 0.13.9, a current Python security patch (CI: 3.11.18/3.12.16/3.13.18), and uv sync --locked. Full dependency audits check both the installed environment and portable lock against OSV, plus upstream FastMCP GHSAs independently of scanner ingestion; they run on PRs, daily, and before release/publication. See [security policy](https://github.com/tonyjurg/Perseus-mcp/blob/main/SECURITY.md). PyPI consumers do not automatically use uv.lock.
+The security baseline is FastMCP >=4.2.3,<5, with additional transitive security floors. uv.lock records exact cross-platform dependencies and hashes. Use uv 0.13.9 or later, a current Python security patch (CI: 3.11.18/3.12.16/3.13.18), and uv sync --locked. Full dependency audits check both the installed environment and portable lock against OSV, plus upstream FastMCP GHSAs independently of scanner ingestion; they run on PRs, daily, and before release/publication. See [security policy](https://github.com/tonyjurg/Perseus-mcp/blob/main/SECURITY.md). PyPI consumers do not automatically use uv.lock.
 
 Perseus MCP is an adapter, not a local corpus or independent textual authority. Its availability and results depend on the public Perseus CTS and Scaife services. Raw XML and JSON remain available where source fidelity matters, while convenience tools provide locally shaped JSON, plaintext, caching, and navigation fallbacks.

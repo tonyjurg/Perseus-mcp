@@ -227,7 +227,7 @@ python -m perseus_mcp
 ### 4) Inspect tools (optional)
 
 ```bash
-npx @modelcontextprotocol/inspector uv run perseus-mcp
+npx @modelcontextprotocol/inspector uv run --locked perseus-mcp
 ```
 
 ## Test strategy and automation
@@ -505,7 +505,7 @@ The server runs with Claude over stdio, with no OpenRouter or API key required (
   "mcpServers": {
     "perseus": {
       "command": "uv",
-      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "perseus-mcp"]
+      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "--locked", "perseus-mcp"]
     }
   }
 }
