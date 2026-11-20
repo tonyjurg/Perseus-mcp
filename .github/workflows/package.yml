@@ -7,6 +7,7 @@ on:
       - development
     paths:
       - pyproject.toml
+      - uv.lock
       - MANIFEST.in
       - src/**
       - README.md
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - pyproject.toml
+      - uv.lock
       - MANIFEST.in
       - src/**
       - README.md
@@ -28,16 +30,21 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.12.16"
 
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install build twine
-      - run: python -m build
-      - run: python -m twine check dist/*
+          python-version: "3.12.16"
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.13.9"
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - run: uv run --locked --extra dev python -m build --no-isolation
+      - run: uv run --locked --extra dev python -m twine check dist/*
       - uses: actions/upload-artifact@v7
         with:
           name: python-package

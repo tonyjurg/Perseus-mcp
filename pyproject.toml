@@ -32,9 +32,16 @@ classifiers = [
 ]
 dependencies = [
   "defusedxml>=0.7.1",
-  "fastmcp>=2.12.0",
+  "fastmcp>=4.2.3,<5",
   "httpx>=0.27.0",
   "platformdirs>=4.0.0",
+  # Security floors also constrain already-installed transitive dependencies.
+  "anyio>=4.14.2",
+  "certifi>=2026.10.19",
+  "cryptography>=50.0.0",
+  "dnspython>=2.9.2",
+  "pydantic-settings>=2.14.2",
+  "PyJWT>=2.15.0",
 ]
 
 [project.optional-dependencies]
@@ -44,10 +51,20 @@ docs = [
 ]
 dev = [
   "build>=1.2",
-  "pytest>=8.0",
+  "pip>=26.2.2",
+  "pytest>=9.0.3",
   "ruff>=0.16.2,<0.18",
+  "setuptools>=84.1.0",
   "twine>=6.0",
+  "wheel>=0.46.2",
 ]
+security = [
+  "packaging>=24",
+  "pip-audit>=2.10.1",
+]
+
+[tool.uv]
+required-version = ">=0.13.9"
 
 [project.urls]
 Homepage = "https://github.com/tonyjurg/Perseus-mcp"
@@ -59,7 +76,7 @@ Issues = "https://github.com/tonyjurg/Perseus-mcp/issues"
 perseus-mcp = "perseus_mcp.server:main"
 
 [build-system]
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools>=84.1.0", "wheel>=0.46.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]

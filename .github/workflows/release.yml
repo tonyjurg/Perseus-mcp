@@ -10,8 +10,14 @@ permissions:
   contents: write
 
 jobs:
+  dependency-security:
+    uses: ./.github/workflows/dependency-audit.yml
+
   release:
+    needs: dependency-security
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.12.16"
 
     steps:
       - name: Check out repository
@@ -22,7 +28,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.12.16"
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.13.9"
 
       - name: Verify tag matches package version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -47,13 +57,13 @@ jobs:
           PY
 
       - name: Install build tooling
-        run: python -m pip install --upgrade build twine
+        run: uv sync --locked --extra dev
 
       - name: Build distributions
-        run: python -m build
+        run: uv run --locked --extra dev python -m build --no-isolation
 
       - name: Validate package metadata
-        run: python -m twine check dist/*
+        run: uv run --locked --extra dev python -m twine check dist/*
 
       - name: Publish GitHub release assets
         if: startsWith(github.ref, 'refs/tags/v')

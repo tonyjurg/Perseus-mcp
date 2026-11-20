@@ -1,0 +1,45 @@
+name: Full dependency audit
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit locked and installed dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13.18"
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.13.9"
+          enable-cache: true
+      - run: uv sync --locked --all-extras
+      - name: Export the portable lock for auditing
+        run: |
+          mkdir -p .cache/audit
+          uv export --locked --all-extras --format pylock.toml --no-emit-project --output-file .cache/audit/pylock.toml
+      - name: Audit every locked platform and extra
+        run: uv run --locked --all-extras python -m pip_audit --locked .cache/audit --strict --vulnerability-service osv
+      - name: Audit the installed environment
+        if: ${{ !cancelled() }}
+        run: |
+          uv pip freeze --exclude-editable > .cache/audit/installed.txt
+          uv run --locked --all-extras python -m pip_audit -r .cache/audit/installed.txt --no-deps --disable-pip --strict --vulnerability-service osv
+      - name: Check upstream FastMCP advisories, including unindexed GHSAs
+        if: ${{ !cancelled() }}
+        run: uv run --locked --all-extras python scripts/check_fastmcp_advisories.py
+        env:
+          GH_TOKEN: ${{ github.token }}

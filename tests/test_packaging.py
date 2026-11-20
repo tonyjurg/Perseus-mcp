@@ -159,7 +159,7 @@ def test_dependabot_tracks_python_and_github_actions_dependencies() -> None:
     configuration = DEPENDABOT_CONFIG.read_text(encoding="utf-8")
 
     assert configuration.startswith("version: 2")
-    assert 'package-ecosystem: "pip"' in configuration
+    assert 'package-ecosystem: "uv"' in configuration
     assert 'package-ecosystem: "github-actions"' in configuration
     assert configuration.count('interval: "weekly"') == 2
     assert configuration.count('directory: "/"') == 2

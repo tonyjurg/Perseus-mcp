@@ -156,18 +156,35 @@ embedded credentials; blocked targets return `UPSTREAM_REDIRECT_BLOCKED`.
 
 ## Setup
 
+The server calls Perseus and Scaife; it does not call OpenAI or another model
+provider, enable FastMCP OpenAPI providers, or configure OAuth. Optional
+OpenRouter examples are separate from the server. See [dependency and runtime
+security](SECURITY.md) for the precise scope, security floors, and audit process.
+
 ### 1) Install dependencies
+
+End users can choose either installation mode:
+
+| Mode | Command | Dependency selection |
+| --- | --- | --- |
+| Flexible PyPI install | `python -m pip install perseus-mcp` | Chooses compatible versions meeting the security floors; FastMCP stays in `>=4.2.3,<5`. No repository checkout or lockfile is required. |
+| Reproducible checkout install | `uv sync --locked` | Uses the exact versions and artifact hashes recorded in `uv.lock`, as tested by CI. Requires a checkout and uv 0.13.9 or later. |
+
+Both modes expose the same server tools. The Python requirement stays at 3.11+;
+use your minor version's current security patch. The lockfile pins the tested
+environment, while package metadata allows compatible upgrades above the security
+minimums. A lockfile update is reviewed through a PR.
 
 Using `uv`:
 
 ```bash
-uv sync
+uv sync --locked
 ```
 
 Or with `pip`:
 
 ```bash
-pip install -e .
+python -m pip install --upgrade --upgrade-strategy=eager -e .
 ```
 
 Since the package is also published to PyPI, users can install it without cloning the repository by using pip:
@@ -179,7 +196,7 @@ pip install perseus-mcp
 For development and tests:
 
 ```bash
-pip install -e ".[dev]"
+uv sync --locked --extra dev --extra security
 ```
 
 ### 2) Run tests
@@ -191,13 +208,13 @@ pytest
 With `uv`, use:
 
 ```bash
-uv run --extra dev pytest
+uv run --locked --extra dev pytest
 ```
 
 ### 3) Run locally
 
 ```bash
-uv run perseus-mcp
+uv run --locked perseus-mcp
 ```
 
 The installed console command and module entry point are equivalent:
@@ -210,7 +227,7 @@ python -m perseus_mcp
 ### 4) Inspect tools (optional)
 
 ```bash
-npx @modelcontextprotocol/inspector uv run perseus-mcp
+npx @modelcontextprotocol/inspector uv run --locked perseus-mcp
 ```
 
 ## Test strategy and automation
@@ -488,7 +505,7 @@ The server runs with Claude over stdio, with no OpenRouter or API key required (
   "mcpServers": {
     "perseus": {
       "command": "uv",
-      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "perseus-mcp"]
+      "args": ["--directory", "/full/path/to/Perseus-mcp", "run", "--locked", "perseus-mcp"]
     }
   }
 }
