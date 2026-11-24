@@ -24,7 +24,7 @@ upgrades, uninstalling, and common setup failures.
 
 ## 01 Basic CTS Workflow
 
-A minimal introduction to direct CTS requests. This notebook is useful for
+A minimal introduction to direct CTS requests. CTS (here short for 'Canonical Text Services Universal Resource Names', CTS URN) provide a unique identifier to locate a digitial edition of a work and the specific part within that work. See [this explanation](https://sites.tufts.edu/perseusupdates/2021/01/05/what-is-a-cts-urn/) for more details. This notebook is useful for
 understanding the upstream CTS response shape before using the MCP tools.
 
 <p class="link-actions">
